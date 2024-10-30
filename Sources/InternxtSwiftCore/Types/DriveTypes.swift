@@ -72,12 +72,34 @@ public struct CreateFolderPayload: Encodable {
         self.folderName = folderName
     }
 }
+
+public struct CreateFolderPayloadNew: Encodable {
+    public let parentFolderUuid: String
+    public let plainName: String
+    init(parentFolderUuid: String, folderName: String)  {
+        self.parentFolderUuid = parentFolderUuid
+        self.plainName = folderName
+    }
+}
 public struct CreateFolderResponse: Decodable {
     public let bucket: String?
     public let id: Int
     public let name: String
     public let plain_name: String?
     public let parentId: Int?
+    // ISO Date
+    public let createdAt: String
+    public let updatedAt: String
+    public let userId: Int
+}
+
+public struct CreateFolderResponseNew: Decodable {
+    public let bucket: String?
+    public let id: Int
+    public let name: String
+    public let plainName: String?
+    public let parentId: Int?
+    public let uuid: String
     // ISO Date
     public let createdAt: String
     public let updatedAt: String
@@ -94,6 +116,10 @@ public struct FolderMetadataUpdatePayload: Encodable {
     public let itemName: String
 }
 
+public struct FolderMetadataUpdatePayloadNew: Encodable {
+    public let plainName: String
+}
+
 
 public struct UpdateFolderPayload: Encodable {
     public let metadata: FolderMetadataUpdatePayload
@@ -101,6 +127,10 @@ public struct UpdateFolderPayload: Encodable {
 
 public struct FileMetadataUpdatePayload: Encodable {
     public let itemName: String
+}
+
+public struct FileMetadataUpdatePayloadNew: Encodable {
+    public let plainName: String
 }
 
 
@@ -113,6 +143,11 @@ public struct UpdateFilePayload: Encodable {
 public struct UpdateFileResponse: Decodable {
     public let plain_name: String
 }
+
+public struct UpdateFileResponseNew: Decodable {
+    public let plainName: String
+}
+
 
 
 public struct GetFolderMetaByIdResponse: Decodable {
@@ -177,6 +212,42 @@ public struct CreateFileData: Encodable {
     }
 }
 
+public struct CreateFileDataNew: Encodable {
+    public let fileId: String
+    public let type: String?
+    public let bucket: String
+    public let size: Int
+    public let folder_id: Int
+    public let name: String?
+    public let plain_name: String
+    public let encrypt_version: String
+    public let folderUuid: String?
+    
+    public init(fileId: String, type: String?, bucket: String, size: Int, folderId: Int, name: String?, plainName: String, encryptVersion: String = "03-aes" , folderUuid: String? = nil) {
+        self.fileId = fileId
+        self.type = type
+        self.bucket = bucket
+        self.size = size
+        self.folder_id = folderId
+        self.folderUuid = folderUuid
+        self.name = name
+        self.plain_name = plainName
+        self.encrypt_version = encryptVersion
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case fileId
+        case type
+        case bucket
+        case size
+        case folder_id
+        case folderUuid
+        case name
+        case plain_name = "plainName"
+        case encrypt_version = "encryptVersion"
+    }
+}
+
 public struct CreateFilePayload: Encodable {
     public let file: CreateFileData
 }
@@ -230,6 +301,49 @@ public struct CreateFileResponse: Decodable {
     public let createdAt: String
     public let deletedAt: String?
     public let uuid: String
+}
+
+public struct CreateFileResponseNew: Decodable {
+    public let deleted: Bool?
+    public let status: String
+    public let id: Int
+    public let name: String
+    public let plain_name: String?
+    public let type: String?
+    public let size: String?
+    public let folderId: Int
+    public let fileId: String
+    public let bucket: String
+    public let encrypt_version: String
+    public let userId: Int
+    public let modificationTime: String
+    public let updatedAt: String
+    public let createdAt: String
+    public let deletedAt: String?
+    public let uuid: String
+    public let folderUuid: String?
+    
+  
+    enum CodingKeys: String, CodingKey {
+        case deleted
+        case status
+        case id
+        case name
+        case plain_name = "plainName"
+        case type
+        case size
+        case folderId
+        case fileId
+        case bucket
+        case encrypt_version = "encryptVersion"
+        case userId
+        case modificationTime
+        case updatedAt
+        case createdAt
+        case deletedAt
+        case uuid
+        case folderUuid
+    }
 }
 
 public struct DriveUser: Codable {
