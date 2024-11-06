@@ -497,19 +497,19 @@ public struct GetDriveItemMetaByIdResponse: Decodable {
 }
 
 
-struct GetAvailableWorkspacesResponse: Codable {
+public struct GetAvailableWorkspacesResponse: Codable {
     let availableWorkspaces: [AvailableWorkspace]
     let pendingWorkspaces: [PendingWorkspace]
 }
 
 
-struct AvailableWorkspace: Codable {
+public struct AvailableWorkspace: Codable {
     let workspaceUser: WorkspaceUser
     let workspace: Workspace
 }
 
 
-struct WorkspaceUser: Codable {
+public struct WorkspaceUser: Codable {
     let id: String
     let memberId: String
     let key: String
@@ -525,7 +525,7 @@ struct WorkspaceUser: Codable {
 }
 
 
-struct Workspace: Codable {
+public struct Workspace: Codable {
     let id: String
     let ownerId: String
     let address: String
@@ -542,6 +542,6 @@ struct Workspace: Codable {
     let updatedAt: String
 }
 
-struct PendingWorkspace: Codable {
+public struct PendingWorkspace: Codable {
 }
 
