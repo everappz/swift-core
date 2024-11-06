@@ -395,7 +395,10 @@ public struct MoveFileResponse: Decodable {
     public let moved: Bool
 }
 
-public struct MoveFileResponseNew: Decodable {}
+public struct MoveFileResponseNew: Decodable {
+    public let type: String?
+    public let size: String
+}
 
 
 public struct DeleteFolderResponse: Decodable {}
