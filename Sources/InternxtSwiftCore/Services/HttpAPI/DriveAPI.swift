@@ -347,4 +347,33 @@ public struct DriveAPI {
         
     }
     
+    public func getAvailableWorkspaces(debug: Bool = false) async throws  -> GetAvailableWorkspacesResponse {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/workspaces",
+            method: .GET
+        )
+        
+        return try await apiClient.fetch(type: GetAvailableWorkspacesResponse.self, endpoint, debugResponse: debug)
+    }
+    
+    public func createFileWorkspace(createFile: CreateFileDataNew,workspaceUuid: String ,debug: Bool = false) async throws -> CreateFileResponseNew {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/workspaces/\(workspaceUuid)/files",
+            method: .POST,
+            body: createFile.toJson()
+        )
+
+        return try await apiClient.fetch(type: CreateFileResponseNew.self, endpoint, debugResponse: debug)
+    }
+    
+    public func createFolderWorkspace(parentFolderUuid: String, folderName: String, workspaceUuid: String,debug: Bool = false) async throws -> CreateFolderResponseNew {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/workspaces/\(workspaceUuid)/folders",
+            method: .POST,
+            body: CreateFolderPayloadNew(parentFolderUuid: parentFolderUuid, folderName: folderName).toJson()
+        )
+        
+        return try await apiClient.fetch(type: CreateFolderResponseNew.self, endpoint, debugResponse: debug)
+    }
+    
 }

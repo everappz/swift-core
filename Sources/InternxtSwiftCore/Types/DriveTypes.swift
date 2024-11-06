@@ -495,3 +495,53 @@ public struct GetDriveItemMetaByIdResponse: Decodable {
     }
     
 }
+
+
+struct GetAvailableWorkspacesResponse: Codable {
+    let availableWorkspaces: [AvailableWorkspace]
+    let pendingWorkspaces: [PendingWorkspace]
+}
+
+
+struct AvailableWorkspace: Codable {
+    let workspaceUser: WorkspaceUser
+    let workspace: Workspace
+}
+
+
+struct WorkspaceUser: Codable {
+    let id: String
+    let memberId: String
+    let key: String
+    let workspaceId: String
+    let rootFolderId: String
+    let spaceLimit: Int64
+    let driveUsage: Int64
+    let backupsUsage: Int64
+    let deactivated: Bool
+    let member: String?
+    let createdAt: String
+    let updatedAt: String
+}
+
+
+struct Workspace: Codable {
+    let id: String
+    let ownerId: String
+    let address: String
+    let name: String
+    let avatar: String?
+    let description: String
+    let defaultTeamId: String
+    let workspaceUserId: String
+    let setupCompleted: Bool
+    let rootFolderId: String
+    let numberOfSeats: Int
+    let phoneNumber: String
+    let createdAt: String
+    let updatedAt: String
+}
+
+struct PendingWorkspace: Codable {
+}
+
