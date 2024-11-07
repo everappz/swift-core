@@ -389,4 +389,20 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: CreateFolderResponseNew.self, endpoint, debugResponse: debug)
     }
     
+    public func getFolderFoldersWorkspace(workspaceId: String ,folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", debug: Bool = false) async throws -> GetFolderFoldersResponse {
+        let query: String = "?offset=\(String(offset))&limit=\(String(limit))&sort=\(sort)"
+        let endpoint = Endpoint(path: "\(self.baseUrl)/workspaces/\(workspaceId)/folders/\(folderId)/folders\(query)")
+        
+        return try await apiClient.fetch(type: GetFolderFoldersResponse.self, endpoint, debugResponse: debug)
+    }
+    
+    
+    public func getFolderFilesWorkspace(workspaceId: String ,folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", debug: Bool = false) async throws -> GetFolderFilesResponse {
+        
+        let query: String = "?offset=\(String(offset))&limit=\(String(limit))&sort=\(sort)"
+        let endpoint = Endpoint(path: "\(self.baseUrl)/workspaces/\(workspaceId)/folders/\(folderId)/files\(query)")
+        
+        return try await apiClient.fetch(type: GetFolderFilesResponse.self, endpoint, debugResponse: debug)
+    }
+    
 }
