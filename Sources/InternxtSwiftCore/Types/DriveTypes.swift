@@ -386,10 +386,20 @@ public struct MoveFilePayload: Encodable {
     public let relativePath:String = NSUUID().uuidString
 }
 
+public struct MoveFilePayloadNew: Encodable {
+    public let destinationFolder: String
+}
+
 
 public struct MoveFileResponse: Decodable {
     public let moved: Bool
 }
+
+public struct MoveFileResponseNew: Decodable {
+    public let type: String?
+    public let size: String
+}
+
 
 public struct DeleteFolderResponse: Decodable {}
 
