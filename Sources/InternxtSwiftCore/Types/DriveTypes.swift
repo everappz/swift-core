@@ -508,48 +508,48 @@ public struct GetDriveItemMetaByIdResponse: Decodable {
 
 
 public struct GetAvailableWorkspacesResponse: Codable {
-    let availableWorkspaces: [AvailableWorkspace]
-    let pendingWorkspaces: [PendingWorkspace]
+    public let availableWorkspaces: [AvailableWorkspace]
+    public let pendingWorkspaces: [PendingWorkspace]
 }
 
 
 public struct AvailableWorkspace: Codable {
-    let workspaceUser: WorkspaceUser
-    let workspace: Workspace
+    public let workspaceUser: WorkspaceUser
+    public let workspace: Workspace
 }
 
 
 public struct WorkspaceUser: Codable {
-    let id: String
-    let memberId: String
-    let key: String
-    let workspaceId: String
-    let rootFolderId: String
-    let spaceLimit: Int64
-    let driveUsage: Int64
-    let backupsUsage: Int64
-    let deactivated: Bool
-    let member: String?
-    let createdAt: String
-    let updatedAt: String
+    public let id: String
+    public let memberId: String
+    public let key: String
+    public let workspaceId: String
+    public let rootFolderId: String
+    public let spaceLimit: Int64
+    public let driveUsage: Int64
+    public let backupsUsage: Int64
+    public let deactivated: Bool
+    public let member: String?
+    public let createdAt: String
+    public let updatedAt: String
 }
 
 
 public struct Workspace: Codable {
-    let id: String
-    let ownerId: String
-    let address: String
-    let name: String
-    let avatar: String?
-    let description: String
-    let defaultTeamId: String
-    let workspaceUserId: String
-    let setupCompleted: Bool
-    let rootFolderId: String
-    let numberOfSeats: Int
-    let phoneNumber: String
-    let createdAt: String
-    let updatedAt: String
+    public let id: String
+    public let ownerId: String
+    public let address: String
+    public let name: String
+    public let avatar: String?
+    public let description: String
+    public let defaultTeamId: String
+    public let workspaceUserId: String
+    public let setupCompleted: Bool
+    public let rootFolderId: String
+    public let numberOfSeats: Int
+    public let phoneNumber: String
+    public let createdAt: String
+    public let updatedAt: String
 }
 
 public struct PendingWorkspace: Codable {
