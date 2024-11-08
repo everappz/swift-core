@@ -57,6 +57,7 @@ public struct GetFolderFoldersResult: Decodable {
     // ISO string
     public let removedAt: String?
     public let status: String
+    public let uuid: String?
 }
 
 public struct GetFolderFoldersResponse: Decodable {
