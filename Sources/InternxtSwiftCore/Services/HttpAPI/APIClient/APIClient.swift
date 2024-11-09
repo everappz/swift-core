@@ -30,6 +30,7 @@ struct APIClient {
     var authorizationHeaderValue: String? = nil
     var clientName: String? = nil
     var clientVersion: String? = nil
+    var workspaceHeader: String? = nil
 
     
     
@@ -98,6 +99,10 @@ struct APIClient {
         
         if let authorizationHeaderValue = self.authorizationHeaderValue {
             urlRequest.setValue(authorizationHeaderValue, forHTTPHeaderField:"Authorization")
+        }
+        
+        if let workspaceHeaderValue = self.workspaceHeader {
+            urlRequest.setValue(workspaceHeaderValue, forHTTPHeaderField:"x-internxt-workspace")
         }
 
         urlRequest.setValue(clientName, forHTTPHeaderField: "internxt-client")

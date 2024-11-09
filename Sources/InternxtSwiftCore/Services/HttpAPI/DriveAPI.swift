@@ -13,10 +13,11 @@ public struct DriveAPI {
     private let apiClient: APIClient
     private let clientName: String
     private let clientVersion: String
-    public init(baseUrl: String, authToken: String, clientName: String, clientVersion: String) {
+    public init(baseUrl: String, authToken: String, clientName: String, clientVersion: String, workspaceHeader: String? = nil) {
         self.baseUrl = baseUrl
         self.apiClient = APIClient(urlSession: URLSession.shared, authorizationHeaderValue: "Bearer \(authToken)", clientName: clientName, 
-            clientVersion: clientVersion
+            clientVersion: clientVersion,
+            workspaceHeader: workspaceHeader
         )
         self.clientName = clientName
         self.clientVersion = clientVersion
