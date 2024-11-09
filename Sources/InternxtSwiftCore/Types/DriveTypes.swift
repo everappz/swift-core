@@ -556,3 +556,11 @@ public struct Workspace: Codable {
 public struct PendingWorkspace: Codable {
 }
 
+public struct CreateFolderWorkspacePayload: Encodable {
+    public let parentFolderUuid: String
+    public let name: String
+    init(parentFolderUuid: String, folderName: String)  {
+        self.parentFolderUuid = parentFolderUuid
+        self.name = folderName
+    }
+}
