@@ -46,13 +46,13 @@ public struct FolderToTrash: Encodable {
     }
 }
 
-public struct AddFoldersToTrashWorkspacePayload: Encodable {
-    public let items: Array<FolderToTrashWorkspace>
-    public init(items: Array<FolderToTrashWorkspace>) {
+public struct AddFoldersToTrashV2Payload: Encodable {
+    public let items: Array<FolderToTrashV2>
+    public init(items: Array<FolderToTrashV2>) {
         self.items = items
     }
 }
-public struct FolderToTrashWorkspace: Encodable {
+public struct FolderToTrashV2: Encodable {
     public let uuid: String
     public let type: String
     
