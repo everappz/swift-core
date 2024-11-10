@@ -565,7 +565,7 @@ public struct CreateFolderWorkspacePayload: Encodable {
     }
 }
 
-public struct WorkspaceCredentialsResponse: Decodable {
+public struct WorkspaceCredentialsResponse: Codable {
     public let workspaceId: String
     public let bucket: String
     public let workspaceUserId: String
@@ -574,7 +574,7 @@ public struct WorkspaceCredentialsResponse: Decodable {
     public let tokenHeader: String
 }
 
-public struct Credentials: Decodable {
+public struct Credentials: Codable {
     public let networkPass: String
     public let networkUser: String
 }
