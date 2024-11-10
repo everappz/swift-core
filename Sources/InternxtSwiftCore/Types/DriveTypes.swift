@@ -564,3 +564,17 @@ public struct CreateFolderWorkspacePayload: Encodable {
         self.name = folderName
     }
 }
+
+public struct WorkspaceCredentialsResponse: Decodable {
+    public let workspaceId: String
+    public let bucket: String
+    public let workspaceUserId: String
+    public let email: String
+    public let credentials: Credentials
+    public let tokenHeader: String
+}
+
+public struct Credentials: Decodable {
+    public let networkPass: String
+    public let networkUser: String
+}

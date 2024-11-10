@@ -406,4 +406,13 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: GetFolderFilesResponse.self, endpoint, debugResponse: debug)
     }
     
+    public func getCredentialsWorkspaces(workspaceId: String, debug: Bool = false) async throws  -> WorkspaceCredentialsResponse {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/workspaces/\(workspaceId)/credentials",
+            method: .GET
+        )
+        
+        return try await apiClient.fetch(type: WorkspaceCredentialsResponse.self, endpoint, debugResponse: debug)
+    }
+    
 }
