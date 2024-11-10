@@ -54,9 +54,9 @@ public struct TrashAPI {
             return apiClientError.statusCode == 200
         }
     }
-    
-    public func trashFoldersByUuid(itemsToTrash: Array<FolderToTrashV2>, debug: Bool = false) async throws -> Bool {
-        let endpoint = Endpoint(path: "\(self.baseUrl)/storage/trash/add",method: .POST, body: AddFoldersToTrashV2Payload(items: itemsToTrash).toJson())
+
+    public func trashItemsByUuid(itemsToTrash: Array<ItemToTrashV2>, debug: Bool = false) async throws -> Bool {
+        let endpoint = Endpoint(path: "\(self.baseUrl)/storage/trash/add",method: .POST, body: AddItemsToTrashPayload(items: itemsToTrash).toJson())
         
         do {
             _ = try await apiClient.fetch(type: AddItemsToTrashResponse.self, endpoint, debugResponse: debug)

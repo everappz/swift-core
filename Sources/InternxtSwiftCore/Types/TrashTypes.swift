@@ -46,21 +46,23 @@ public struct FolderToTrash: Encodable {
     }
 }
 
-public struct AddFoldersToTrashV2Payload: Encodable {
-    public let items: Array<FolderToTrashV2>
-    public init(items: Array<FolderToTrashV2>) {
-        self.items = items
-    }
-}
-public struct FolderToTrashV2: Encodable {
+public struct AddItemsToTrashResponse: Decodable {}
+
+
+public struct ItemToTrashV2: Encodable {
     public let uuid: String
     public let type: String
     
-    public init(uuid: String) {
+    public init(uuid: String, type: ItemToTrashType) {
         self.uuid = uuid
-        self.type = ItemToTrashType.Folder.rawValue
+        self.type = type.rawValue
     }
 }
 
-
-public struct AddItemsToTrashResponse: Decodable {}
+public struct AddItemsToTrashPayload: Encodable {
+    public let items: [ItemToTrashV2]
+    
+    public init(items: [ItemToTrashV2]) {
+        self.items = items
+    }
+}
