@@ -46,5 +46,21 @@ public struct FolderToTrash: Encodable {
     }
 }
 
+public struct AddFoldersToTrashWorkspacePayload: Encodable {
+    public let items: Array<FolderToTrashWorkspace>
+    public init(items: Array<FolderToTrashWorkspace>) {
+        self.items = items
+    }
+}
+public struct FolderToTrashWorkspace: Encodable {
+    public let uuid: String
+    public let type: String
+    
+    public init(uuid: String) {
+        self.uuid = uuid
+        self.type = ItemToTrashType.Folder.rawValue
+    }
+}
+
 
 public struct AddItemsToTrashResponse: Decodable {}
