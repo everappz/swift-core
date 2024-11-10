@@ -164,6 +164,15 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: GetFolderMetaByIdResponse.self, endpoint, debugResponse: debug)
     }
     
+    public func getFolderMetaByUuid(uuid: String, debug: Bool = false) async throws -> GetFolderMetaByIdResponse {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/folders/\(uuid)/meta",
+            method: .GET
+        )
+        
+        return try await apiClient.fetch(type: GetFolderMetaByIdResponse.self, endpoint, debugResponse: debug)
+    }
+    
     public func getFileMetaByUuid(uuid: String, debug: Bool = false)  async throws -> GetFileMetaByIdResponse {
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/files/\(uuid)/meta",
