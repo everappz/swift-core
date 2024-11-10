@@ -188,6 +188,7 @@ public struct GetFileMetaByIdResponse: Decodable {
     public let removed: Bool?
     public let removedAt: String?
     public let status: String
+    public let folderUuid: String?
 }
 
 
