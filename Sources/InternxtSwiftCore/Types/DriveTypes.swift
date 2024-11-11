@@ -583,7 +583,7 @@ public struct Credentials: Codable {
     public let networkUser: String
 }
 
-public struct ExistenceFilePayload: Codable {
+public struct ExistenceFilePayload: Encodable {
     public let files: Array<ExistenceFile>
     
     public init(files: Array<ExistenceFile>) {
@@ -591,7 +591,7 @@ public struct ExistenceFilePayload: Codable {
     }
 }
 
-public struct ExistenceFile: Codable {
+public struct ExistenceFile: Encodable {
     public let plainName: String
     public let type: String
     
