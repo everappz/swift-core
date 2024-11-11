@@ -417,6 +417,8 @@ public struct MoveFolderResponse: Decodable {
     public let moved: Bool
 }
 
+public struct MoveFolderResponseNew: Decodable {}
+
 
 public struct GetLimitResponse: Decodable {
     public let maxSpaceBytes: Int64
