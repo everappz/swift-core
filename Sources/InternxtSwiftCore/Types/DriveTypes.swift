@@ -585,11 +585,20 @@ public struct Credentials: Codable {
 
 public struct ExistenceFilePayload: Codable {
     public let files: Array<ExistenceFile>
+    
+    public init(files: Array<ExistenceFile>) {
+        self.files = files
+    }
 }
 
 public struct ExistenceFile: Codable {
     public let plainName: String
     public let type: String
+    
+    init(plainName: String, type: String)  {
+        self.plainName = plainName
+        self.type = type
+    }
 }
 
 
