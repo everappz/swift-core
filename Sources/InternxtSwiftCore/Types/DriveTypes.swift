@@ -595,7 +595,7 @@ public struct ExistenceFile: Encodable {
     public let plainName: String
     public let type: String
     
-    init(plainName: String, type: String)  {
+    public init(plainName: String, type: String)  {
         self.plainName = plainName
         self.type = type
     }
