@@ -355,6 +355,17 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: GetFileInFolderByPlainNameResponse.self, endpoint, debugResponse: debug)
     }
     
+    
+    public func getExistenceFileInFolderByPlainName(uuid: String, files: Array<ExistenceFile>, debug: Bool = false) async throws  -> ExistenceFilesResponse {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/folders/content/\(uuid)/files/existence",
+            method: .POST,
+            body: ExistenceFilePayload(files: files).toJson()
+        )
+        
+        return try await apiClient.fetch(type: ExistenceFilesResponse.self, endpoint, debugResponse: debug)
+    }
+    
   
     public func getFolderOrFileMetaById(id: String, debug: Bool = false) async throws -> GetDriveItemMetaByIdResponse {
         

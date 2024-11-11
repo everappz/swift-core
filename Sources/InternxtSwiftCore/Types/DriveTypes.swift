@@ -582,3 +582,27 @@ public struct Credentials: Codable {
     public let networkPass: String
     public let networkUser: String
 }
+
+public struct ExistenceFilePayload: Codable {
+    public let files: Array<ExistenceFile>
+}
+
+public struct ExistenceFile: Codable {
+    public let plainName: String
+    public let type: String
+}
+
+
+public struct ExistenceFilesResponse: Codable {
+    public let existentFiles: Array<GetExistenceFileInFolderResponse>
+}
+
+public struct GetExistenceFileInFolderResponse: Codable {
+    public let id: Int
+    public let uuid: String
+    public let fileId: String
+    public let name: String?
+    public let type: String?
+    public let plainName: String
+}
+
