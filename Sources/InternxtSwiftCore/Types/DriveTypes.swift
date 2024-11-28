@@ -442,6 +442,7 @@ public struct UpdatedFile: Decodable {
     public let updatedAt: String
     public let createdAt: String
     public let type: String?
+    public let folderUuid: String?
 }
 
 
@@ -456,6 +457,8 @@ public struct UpdatedFolder: Decodable {
     public let plainName: String?
     public let updatedAt: String
     public let createdAt: String
+    public let parentUuid: String?
+    public let uuid: String?
 }
 
 public typealias GetUpdatedFoldersResponse = [UpdatedFolder]

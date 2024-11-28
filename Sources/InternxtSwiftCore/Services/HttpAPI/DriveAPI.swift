@@ -448,4 +448,57 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: WorkspaceCredentialsResponse.self, endpoint, debugResponse: debug)
     }
     
+    public func getUpdatedFilesWorkspace(
+        updatedAt: Date,
+        status: String = "ALL",
+        limit: Int = 50,
+        offset: Int = 0,
+        bucketId: String? = nil,
+        workspaceId: String,
+        debug: Bool = false
+    ) async throws -> GetUpdatedFilesResponse {
+        
+       
+        let dateFormatter =  ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime]
+        
+        let formattedUpdatedAt =  dateFormatter.string(from: updatedAt)
+        var path = "\(self.baseUrl)/workspaces/\(workspaceId)/files?updatedAt=\(formattedUpdatedAt)&status=\(status)&offset=\(offset)&limit=\(limit)"
+        
+        if let bucket = bucketId {
+            path = "\(path)&bucket=\(bucket)"
+        }
+        
+        let endpoint = Endpoint(
+            path: path,
+            method: .GET
+        )
+        
+        return try await apiClient.fetch(type: GetUpdatedFilesResponse.self, endpoint, debugResponse: debug)
+    }
+    
+    public func getUpdatedFoldersWorkspace(
+        updatedAt: Date,
+        status: String = "ALL",
+        limit: Int = 50,
+        offset: Int = 0,
+        workspaceId: String,
+        debug: Bool = false,
+    ) async throws -> GetUpdatedFoldersResponse {
+        
+       
+        let dateFormatter =  ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime]
+        
+        let formattedUpdatedAt =  dateFormatter.string(from: updatedAt)
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/workspaces/\(workspaceId)/folders?updatedAt=\(formattedUpdatedAt)&status=\(status)&offset=\(offset)&limit=\(limit)",
+            method: .GET
+        )
+        
+    
+        
+        return try await apiClient.fetch(type: GetUpdatedFoldersResponse.self, endpoint, debugResponse: debug)
+    }
+    
 }
