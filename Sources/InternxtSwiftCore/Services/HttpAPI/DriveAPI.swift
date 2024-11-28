@@ -483,7 +483,7 @@ public struct DriveAPI {
         limit: Int = 50,
         offset: Int = 0,
         workspaceId: String,
-        debug: Bool = false,
+        debug: Bool = false
     ) async throws -> GetUpdatedFoldersResponse {
         
        
