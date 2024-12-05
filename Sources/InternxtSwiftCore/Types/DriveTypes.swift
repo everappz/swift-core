@@ -555,7 +555,7 @@ public struct Workspace: Codable {
     public let setupCompleted: Bool
     public let rootFolderId: String
     public let numberOfSeats: Int
-    public let phoneNumber: String
+    public let phoneNumber: String?
     public let createdAt: String
     public let updatedAt: String
 }
