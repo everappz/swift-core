@@ -45,6 +45,7 @@ struct APIClient {
                     if debugResponse == true {
                         print("API CLIENT ERROR", error)
                     }
+                    LibraryLogger.shared.logError("API Request Error: \(error.localizedDescription)")
                     continuation.resume(with: .failure(APIError.failedRequest(error.localizedDescription)))
                     return
                 }
@@ -63,6 +64,11 @@ struct APIClient {
                     if(debugResponse == true) {
                         print("\(endpoint.path) response is \(String(decoding: data!, as: UTF8.self))")
                     }
+                    if !(200...299).contains(httpResponse.statusCode) {
+                        let responseBody = data.flatMap { String(decoding: $0, as: UTF8.self) } ?? "No response body"
+                        LibraryLogger.shared.logError("Error response is :\(responseBody)")
+                    }
+                   
                     let json = try JSONDecoder().decode(T.self, from: data!)
                     continuation.resume(with:.success(json))
                 } catch let DecodingError.dataCorrupted(context) {
