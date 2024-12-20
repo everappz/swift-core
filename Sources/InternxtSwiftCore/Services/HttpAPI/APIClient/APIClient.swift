@@ -31,7 +31,7 @@ struct APIClient {
     var clientName: String? = nil
     var clientVersion: String? = nil
     var workspaceHeader: String? = nil
-
+    private let logger = LibraryLogger.shared.getLogger(subsystem: "com.internxt.APIClient", category: "Networking")
     
     
   
@@ -45,7 +45,7 @@ struct APIClient {
                     if debugResponse == true {
                         print("API CLIENT ERROR", error)
                     }
-                    LibraryLogger.shared.logError("API Request Error: \(error.localizedDescription)")
+                    logger.error("API Request Error: \(error.localizedDescription)")
                     continuation.resume(with: .failure(APIError.failedRequest(error.localizedDescription)))
                     return
                 }
@@ -65,8 +65,9 @@ struct APIClient {
                         print("\(endpoint.path) response is \(String(decoding: data!, as: UTF8.self))")
                     }
                     if !(200...299).contains(httpResponse.statusCode) {
+                        
                         let responseBody = data.flatMap { String(decoding: $0, as: UTF8.self) } ?? "No response body"
-                        LibraryLogger.shared.logError("Error response is :\(responseBody)")
+                        logger.error("Error response is :\(responseBody)")
                     }
                    
                     let json = try JSONDecoder().decode(T.self, from: data!)

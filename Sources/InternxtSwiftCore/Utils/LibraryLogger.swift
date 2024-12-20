@@ -1,42 +1,57 @@
-import XCGLogger
 import Foundation
+import XCGLogger
 
 public class LibraryLogger {
     public static let shared = LibraryLogger()
-    private let logger: XCGLogger
+    private var loggers: [String: XCGLogger] = [:]
 
-    private init() {
-        logger = XCGLogger(identifier: "InternxtSwiftCoreLogger")
+    private init() {}
+
+    /// Creates or retrieves a logger for a specific subsystem and category.
+    public func getLogger(subsystem: String, category: String) -> XCGLogger {
+        let loggerKey = "\(subsystem).\(category)"
         
-        logger.setup(level: .debug)
-        
-      
-        let logsDirectory = LibraryLogger.getLogsDirectory()
-        let logFile = logsDirectory.appendingPathComponent("InternxtSwiftCore.log")
-        
-        let fileDestination = FileDestination(writeToFile: logFile.path, identifier: "fileDestination")
-        fileDestination.outputLevel = .debug
-        fileDestination.showDate = true
-        fileDestination.showLogIdentifier = true
-        fileDestination.showFunctionName = true
-        fileDestination.showThreadName = true
-        
-        logger.add(destination: fileDestination)
+        if let existingLogger = loggers[loggerKey] {
+            return existingLogger
+        }
+
+        let logger = XCGLogger(identifier: loggerKey, includeDefaultDestinations: false)
+
+        // System log destination (console output)
+        let systemDestination = AppleSystemLogDestination(identifier: "\(loggerKey).systemDestination")
+        systemDestination.outputLevel = .debug
+        systemDestination.showLogIdentifier = false
+        systemDestination.showFunctionName = false
+        systemDestination.showThreadName = false
+        systemDestination.showLevel = true
+        systemDestination.showFileName = true
+        systemDestination.showLineNumber = true
+        systemDestination.showDate = true
+        logger.add(destination: systemDestination)
+
+        // File log destination
+        if let logsDirectory = LibraryLogger.getLogsDirectory() {
+            let logFile = logsDirectory.appendingPathComponent("\(loggerKey).log")
+            let fileDestination = FileDestination(writeToFile: logFile.path, identifier: "\(loggerKey).fileDestination", shouldAppend: true)
+            fileDestination.outputLevel = .debug
+            fileDestination.showLogIdentifier = false
+            fileDestination.showFunctionName = false
+            fileDestination.showThreadName = false
+            fileDestination.showLevel = true
+            fileDestination.showFileName = true
+            fileDestination.showDate = true
+            fileDestination.logQueue = DispatchQueue.global(qos: .background)
+            logger.add(destination: fileDestination)
+        }
+
+        loggers[loggerKey] = logger
+        return logger
     }
 
-    public func logInfo(_ message: String) {
-        logger.info(message)
-    }
 
-    public func logDebug(_ message: String) {
-        logger.debug(message)
-    }
 
-    public func logError(_ message: String) {
-        logger.error(message)
-    }
-
-    private static func getLogsDirectory() -> URL {
+    /// Retrieves the directory for logs, creating it if necessary.
+    private static func getLogsDirectory() -> URL? {
         let fileManager = FileManager.default
         if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: "JR4S3SY396.group.internxt.desktop") {
             let logsDirectory = groupURL.appendingPathComponent("Logs")
