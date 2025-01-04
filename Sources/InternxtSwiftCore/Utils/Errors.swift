@@ -40,7 +40,7 @@ enum ExtensionError: Swift.Error, Equatable {
     case InvalidHex
 }
 
-enum UploadError: Error {
+public enum UploadError: Error {
     case InvalidIndex
     case CannotGenerateFileHash
     case FailedToFinishUpload
@@ -48,6 +48,7 @@ enum UploadError: Error {
     case UploadNotSuccessful
     case UploadedSizeNotMatching
     case MissingEtag
+    case PartUploadFailed(partIndex: Int, error: Error)
 }
 
 
