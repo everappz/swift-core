@@ -8,8 +8,8 @@
 import Foundation
 import CryptoKit
 
-let MULTIPART_MIN_SIZE = 700 * 1024 * 1024;
-let MULTIPART_CHUNK_SIZE = 200 * 1024 * 1024;
+let MULTIPART_MIN_SIZE = 100 * 1024 * 1024;
+let MULTIPART_CHUNK_SIZE = 50 * 1024 * 1024;
 
 
 @available(macOS 10.15, *)
@@ -129,20 +129,44 @@ public struct NetworkFacade {
         if uploadUrls.count != Int(parts) {
             throw UploadMultipartError.MorePartsThanUploadUrls
         }
+        
+        var uploadAborted = false
+        
         func processEncryptedChunk(encryptedChunk: Data, partIndex: Int, debug: Bool = false) async throws -> Void {
             
-            let uploadUrl = uploadUrls[partIndex]
-            let etag = try await uploadMultipart.uploadPart(encryptedChunk: encryptedChunk, uploadUrl: uploadUrl, partIndex: partIndex){progress in
-                accumulatedProgress += (progress * maxProgressPerPart) / 100
-                // Each part reports the max progress per part
-                progressHandler(accumulatedProgress)
+            guard !uploadAborted else {
+                throw UploadError.UploadNotSuccessful
             }
             
-            let uploadedPartConfig = UploadedPartConfig(
-                etag: etag, partNumber: partIndex + 1
-            )
+            let uploadUrl = uploadUrls[partIndex]
+            var attempt = 0
+            let maxRetries = 3
             
-            uploadedPartsConfigs.append(uploadedPartConfig)
+            
+            while attempt < maxRetries {
+                
+                do {
+                    let etag = try await uploadMultipart.uploadPart(
+                        encryptedChunk: encryptedChunk,
+                        uploadUrl: uploadUrl,
+                        partIndex: partIndex
+                    ) { progress in
+                        accumulatedProgress += (progress * maxProgressPerPart) / 100
+                        progressHandler(accumulatedProgress)
+                    }
+                    
+                    let uploadedPartConfig = UploadedPartConfig(
+                        etag: etag, partNumber: partIndex + 1
+                    )
+                    uploadedPartsConfigs.append(uploadedPartConfig)
+                    return
+                } catch {
+                    attempt += 1
+                    if attempt >= maxRetries {
+                        uploadAborted = true
+                        throw UploadError.PartUploadFailed(partIndex: partIndex, error: error)
+                    }                }
+            }
             
         }
         
@@ -153,6 +177,9 @@ public struct NetworkFacade {
             key: fileKey,
             iv: iv
         ){encryptedChunk in
+            guard !uploadAborted else {
+                throw UploadError.UploadNotSuccessful
+            }
             hasher.update(data: encryptedChunk)
             // If something fails here, the error is propagated
             // and the stream reading is stopped
