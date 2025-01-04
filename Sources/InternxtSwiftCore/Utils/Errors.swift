@@ -40,7 +40,7 @@ enum ExtensionError: Swift.Error, Equatable {
     case InvalidHex
 }
 
-public enum UploadError: Error {
+public enum UploadError: Error, Equatable {
     case InvalidIndex
     case CannotGenerateFileHash
     case FailedToFinishUpload
@@ -49,6 +49,23 @@ public enum UploadError: Error {
     case UploadedSizeNotMatching
     case MissingEtag
     case PartUploadFailed(partIndex: Int, error: Error)
+
+    public static func == (lhs: UploadError, rhs: UploadError) -> Bool {
+        switch (lhs, rhs) {
+        case (.InvalidIndex, .InvalidIndex),
+             (.CannotGenerateFileHash, .CannotGenerateFileHash),
+             (.FailedToFinishUpload, .FailedToFinishUpload),
+             (.MissingUploadUrl, .MissingUploadUrl),
+             (.UploadNotSuccessful, .UploadNotSuccessful),
+             (.UploadedSizeNotMatching, .UploadedSizeNotMatching),
+             (.MissingEtag, .MissingEtag):
+            return true
+        case let (.PartUploadFailed(lhsPartIndex, lhsError), .PartUploadFailed(rhsPartIndex, rhsError)):
+            return lhsPartIndex == rhsPartIndex && lhsError.localizedDescription == rhsError.localizedDescription
+        default:
+            return false
+        }
+    }
 }
 
 
