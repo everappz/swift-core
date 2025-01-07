@@ -49,7 +49,7 @@ public class UploadMultipart: NSObject {
     
     
     private var progressHandlersByTaskID = [Int : ProgressHandler]()
-    
+    private let progressHandlerStore = ProgressHandlerStore()
     init(networkAPI: NetworkAPI, urlSession: URLSession? = nil) {
         self.networkAPI = networkAPI
         super.init()
@@ -83,15 +83,19 @@ public class UploadMultipart: NSObject {
         
         var shards: Array<ShardUploadPayload> = Array()
         
-        let shardPayload = ShardUploadPayload(
-            hash: fileHash,
-            uuid: uploadUuid,
-            parts: uploadedParts.map{ uploadedPart in
-                return ShardPartPayload(
+        let sortedParts = uploadedParts
+            .map { uploadedPart in
+                ShardPartPayload(
                     ETag: uploadedPart.etag,
                     PartNumber: uploadedPart.partNumber
                 )
-            },
+            }
+            .sorted { $0.PartNumber < $1.PartNumber }
+
+        let shardPayload = ShardUploadPayload(
+            hash: fileHash,
+            uuid: uploadUuid,
+            parts: sortedParts,
             uploadId: uploadId
         )
         
@@ -144,9 +148,9 @@ public class UploadMultipart: NSObject {
                     continuation.resume(throwing: error)
                 }
             )
-            
-            if progressHandler != nil {
-                progressHandlersByTaskID[task.taskIdentifier] = progressHandler
+                        
+            Task {
+                await progressHandlerStore.setHandler(for: task.taskIdentifier, handler: progressHandler)
             }
             
             
@@ -157,3 +161,22 @@ public class UploadMultipart: NSObject {
     
     
 }
+
+actor ProgressHandlerStore {
+    private var handlers: [Int: ProgressHandler] = [:]
+    
+    func setHandler(for taskID: Int, handler: ProgressHandler?) {
+        if let handler = handler {
+            handlers[taskID] = handler
+        }
+    }
+    
+    func getHandler(for taskID: Int) -> ProgressHandler? {
+        return handlers[taskID]
+    }
+    
+    func removeHandler(for taskID: Int) {
+        handlers.removeValue(forKey: taskID)
+    }
+}
+
