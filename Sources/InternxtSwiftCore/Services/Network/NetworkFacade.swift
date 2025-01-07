@@ -116,10 +116,9 @@ public struct NetworkFacade {
         var hasher = SHA256.init()
         var accumulatedProgress = 0.0
         let parts = ceil(Double(fileSize) / Double(MULTIPART_CHUNK_SIZE))
-        var partIndex = 0
-        var uploadedPartsConfigs: [UploadedPartConfig] = []
+        
         let startUploadResult = try await uploadMultipart.start(bucketId: bucketId, fileSize: fileSize, parts: Int(parts))
-        // We use 0.99 so we can determine when we reach the full 100%
+        
         let maxProgressPerPart: Double = 0.99 / parts
         
         guard let uploadUrls = startUploadResult.urls else {
@@ -130,22 +129,24 @@ public struct NetworkFacade {
             throw UploadMultipartError.MorePartsThanUploadUrls
         }
         
-        var uploadAborted = false
         
-        func processEncryptedChunk(encryptedChunk: Data, partIndex: Int, debug: Bool = false) async throws -> Void {
-            
-            guard !uploadAborted else {
-                throw UploadError.UploadNotSuccessful
-            }
-            
+        let uploadedPartsActor = UploadedPartsActor()
+        let uploadState = UploadState()
+        let semaphore = DispatchSemaphore(value: 6)
+        
+        
+        func processEncryptedChunk(encryptedChunk: Data, partIndex: Int) async throws {
             let uploadUrl = uploadUrls[partIndex]
             var attempt = 0
             let maxRetries = 3
-            
+
+            if await uploadState.isAborted() {
+                throw UploadError.UploadNotSuccessful
+            }
             
             while attempt < maxRetries {
-                
                 do {
+
                     let etag = try await uploadMultipart.uploadPart(
                         encryptedChunk: encryptedChunk,
                         uploadUrl: uploadUrl,
@@ -154,63 +155,103 @@ public struct NetworkFacade {
                         accumulatedProgress += (progress * maxProgressPerPart) / 100
                         progressHandler(accumulatedProgress)
                     }
-                    
-                    let uploadedPartConfig = UploadedPartConfig(
-                        etag: etag, partNumber: partIndex + 1
-                    )
-                    uploadedPartsConfigs.append(uploadedPartConfig)
+                    let uploadedPartConfig = UploadedPartConfig(etag: etag, partNumber: partIndex + 1)
+                    await uploadedPartsActor.addUploadedPartConfig(uploadedPartConfig)
                     return
                 } catch {
                     attempt += 1
-                    if attempt >= maxRetries {
-                        uploadAborted = true
-                        throw UploadError.PartUploadFailed(partIndex: partIndex, error: error)
-                    }                }
-            }
             
+                    if attempt >= maxRetries {
+                        await uploadState.setAborted()
+                        throw UploadError.PartUploadFailed(partIndex: partIndex, error: error)
+                    }
+                }
+            }
         }
         
-        try await encrypt.encryptFileIntoChunks(
-            chunkSizeInBytes: MULTIPART_CHUNK_SIZE,
-            totalBytes: fileSize,
-            inputStream: input,
-            key: fileKey,
-            iv: iv
-        ){encryptedChunk in
-            guard !uploadAborted else {
-                throw UploadError.UploadNotSuccessful
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            var tasks: [Data] = []
+            try await encrypt.encryptFileIntoChunks(
+                chunkSizeInBytes: MULTIPART_CHUNK_SIZE,
+                totalBytes: fileSize,
+                inputStream: input,
+                key: fileKey,
+                iv: iv
+            ) { encryptedChunk in
+                hasher.update(data: encryptedChunk)
+                tasks.append(encryptedChunk)
             }
-            hasher.update(data: encryptedChunk)
-            // If something fails here, the error is propagated
-            // and the stream reading is stopped
-            try await processEncryptedChunk(encryptedChunk: encryptedChunk, partIndex: partIndex)
-            partIndex += 1
+            
+            for (index, encryptedChunk) in tasks.enumerated() {
+                semaphore.wait()
+                
+                group.addTask {
+                    defer { semaphore.signal() }
+                    do {
+                        if await uploadState.isAborted() {
+                            throw UploadError.UploadNotSuccessful
+                        }
+                        try await processEncryptedChunk(encryptedChunk: encryptedChunk, partIndex: index)
+                    } catch {
+                        await uploadState.setAborted()
+                        throw error
+                    }
+                }     
+            }
+            
+            do {
+                 try await group.waitForAll()
+             } catch {
+                 throw error
+             }
         }
         
         let fileSHA256digest = hasher.finalize()
         
         var sha256Hash = [UInt8]()
-        fileSHA256digest.withUnsafeBytes {bytes in
+        fileSHA256digest.withUnsafeBytes { bytes in
             sha256Hash.append(contentsOf: bytes)
         }
         
         let fileHash = HMAC().ripemd160(message: Data(sha256Hash))
-        
         
         let finishUpload = try await uploadMultipart.finishUpload(
             bucketId: bucketId,
             fileHash: fileHash.toHexString(),
             uploadUuid: startUploadResult.uuid,
             uploadId: startUploadResult.UploadId!,
-            uploadedParts: uploadedPartsConfigs,
+            uploadedParts: await uploadedPartsActor.getUploadedPartsConfigs(),
             index: Data(index),
             debug: debug
         )
         
-        // Finish the progress
         progressHandler(1)
-        
         return finishUpload
+    }
+    
+    actor UploadedPartsActor {
+        private var uploadedPartsConfigs: [UploadedPartConfig] = []
+        
+        
+        func addUploadedPartConfig(_ partConfig: UploadedPartConfig) {
+            uploadedPartsConfigs.append(partConfig)
+        }
+
+        func getUploadedPartsConfigs() -> [UploadedPartConfig] {
+            return uploadedPartsConfigs
+        }
+    }
+    
+    actor UploadState {
+        var uploadAborted = false
+        
+        func setAborted() {
+            uploadAborted = true
+        }
+        
+        func isAborted() -> Bool {
+            return uploadAborted
+        }
     }
     
     public func downloadFile(bucketId: String, fileId: String, encryptedFileDestination: URL, destinationURL: URL, progressHandler: @escaping ProgressHandler, debug: Bool = false) async throws -> URL {
