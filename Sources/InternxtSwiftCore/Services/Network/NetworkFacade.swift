@@ -10,6 +10,7 @@ import CryptoKit
 
 let MULTIPART_MIN_SIZE = 100 * 1024 * 1024;
 let MULTIPART_CHUNK_SIZE = 50 * 1024 * 1024;
+let MAX_WAIT_TIME: TimeInterval = 3600
 
 
 @available(macOS 10.15, *)
@@ -114,12 +115,10 @@ public struct NetworkFacade {
         debug: Bool = false
     ) async throws -> FinishUploadResponse {
         var hasher = SHA256.init()
-        var accumulatedProgress = 0.0
         let parts = ceil(Double(fileSize) / Double(MULTIPART_CHUNK_SIZE))
+        let maxProgressPerPart: Double = 0.99 / parts
         
         let startUploadResult = try await uploadMultipart.start(bucketId: bucketId, fileSize: fileSize, parts: Int(parts))
-        
-        let maxProgressPerPart: Double = 0.99 / parts
         
         guard let uploadUrls = startUploadResult.urls else {
             throw UploadError.MissingUploadUrl
@@ -132,82 +131,51 @@ public struct NetworkFacade {
         
         let uploadedPartsActor = UploadedPartsActor()
         let uploadState = UploadState()
-        let semaphore = DispatchSemaphore(value: 6)
         
-        
-        func processEncryptedChunk(encryptedChunk: Data, partIndex: Int) async throws {
-            let uploadUrl = uploadUrls[partIndex]
-            var attempt = 0
-            let maxRetries = 3
-
-            if await uploadState.isAborted() {
-                throw UploadError.UploadNotSuccessful
-            }
-            
-            while attempt < maxRetries {
-                do {
-
-                    let etag = try await uploadMultipart.uploadPart(
-                        encryptedChunk: encryptedChunk,
-                        uploadUrl: uploadUrl,
-                        partIndex: partIndex
-                    ) { progress in
-                        accumulatedProgress += (progress * maxProgressPerPart) / 100
-                        progressHandler(accumulatedProgress)
-                    }
-                    let uploadedPartConfig = UploadedPartConfig(etag: etag, partNumber: partIndex + 1)
-                    await uploadedPartsActor.addUploadedPartConfig(uploadedPartConfig)
-                    return
-                } catch {
-                    attempt += 1
-            
-                    if attempt >= maxRetries {
-                        await uploadState.setAborted()
-                        throw UploadError.PartUploadFailed(partIndex: partIndex, error: error)
-                    }
-                }
-            }
+        var tasks: [Data] = []
+        try await encrypt.encryptFileIntoChunks(
+            chunkSizeInBytes: MULTIPART_CHUNK_SIZE,
+            totalBytes: fileSize,
+            inputStream: input,
+            key: fileKey,
+            iv: iv
+        ) { encryptedChunk in
+            hasher.update(data: encryptedChunk)
+            tasks.append(encryptedChunk)
         }
         
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            var tasks: [Data] = []
-            try await encrypt.encryptFileIntoChunks(
-                chunkSizeInBytes: MULTIPART_CHUNK_SIZE,
-                totalBytes: fileSize,
-                inputStream: input,
-                key: fileKey,
-                iv: iv
-            ) { encryptedChunk in
-                hasher.update(data: encryptedChunk)
-                tasks.append(encryptedChunk)
+        let operationQueue = OperationQueue()
+        operationQueue.maxConcurrentOperationCount = 6
+        
+        for (index, encryptedChunk) in tasks.enumerated() {
+            if await uploadedPartsActor.isPartUploaded(partIndex: index) {
+                continue
             }
             
-            for (index, encryptedChunk) in tasks.enumerated() {
-                semaphore.wait()
-                
-                group.addTask {
-                    defer { semaphore.signal() }
-                    do {
-                        if await uploadState.isAborted() {
-                            throw UploadError.UploadNotSuccessful
-                        }
-                        try await processEncryptedChunk(encryptedChunk: encryptedChunk, partIndex: index)
-                    } catch {
-                        await uploadState.setAborted()
-                        throw error
-                    }
-                }     
-            }
-            
-            do {
-                 try await group.waitForAll()
-             } catch {
-                 throw error
-             }
+            let uploadUrl = uploadUrls[index]
+            let operation = UploadPartOperation(
+                encryptedChunk: encryptedChunk,
+                partIndex: index,
+                uploadUrl: uploadUrl,
+                uploadMultipart: uploadMultipart,
+                uploadState: uploadState,
+                maxProgressPerPart: maxProgressPerPart,
+                progressHandler: { progress in
+                    progressHandler(progress)
+                },
+                uploadedPartsActor: uploadedPartsActor
+            )
+            operationQueue.addOperation(operation)
+        }
+        
+        operationQueue.waitUntilAllOperationsAreFinished()
+        
+        if await uploadState.isAborted() {
+            operationQueue.cancelAllOperations()
+            throw UploadError.UploadNotSuccessful
         }
         
         let fileSHA256digest = hasher.finalize()
-        
         var sha256Hash = [UInt8]()
         fileSHA256digest.withUnsafeBytes { bytes in
             sha256Hash.append(contentsOf: bytes)
@@ -239,6 +207,10 @@ public struct NetworkFacade {
 
         func getUploadedPartsConfigs() -> [UploadedPartConfig] {
             return uploadedPartsConfigs
+        }
+        
+        func isPartUploaded(partIndex: Int) -> Bool {
+            return uploadedPartsConfigs.contains(where: { $0.partNumber == partIndex + 1 })
         }
     }
     
@@ -336,4 +308,99 @@ public struct NetworkFacade {
             throw NetworkFacadeError.DecryptionFailed
         }
     }
+    
+    class UploadPartOperation: AsyncOperation {
+        let encryptedChunk: Data
+        let partIndex: Int
+        let uploadUrl: String
+        let uploadMultipart: UploadMultipart
+        let uploadState: UploadState
+        let maxProgressPerPart: Double
+        let progressHandler: (Double) -> Void
+        let uploadedPartsActor: UploadedPartsActor
+        
+        init(
+            encryptedChunk: Data,
+            partIndex: Int,
+            uploadUrl: String,
+            uploadMultipart: UploadMultipart,
+            uploadState: UploadState,
+            maxProgressPerPart: Double,
+            progressHandler: @escaping (Double) -> Void,
+            uploadedPartsActor: UploadedPartsActor
+        ) {
+            self.encryptedChunk = encryptedChunk
+            self.partIndex = partIndex
+            self.uploadUrl = uploadUrl
+            self.uploadMultipart = uploadMultipart
+            self.uploadState = uploadState
+            self.maxProgressPerPart = maxProgressPerPart
+            self.progressHandler = progressHandler
+            self.uploadedPartsActor = uploadedPartsActor
+        }
+        
+        override func main() {
+            Task {
+                do {
+                    try await uploadPartWithRetry()
+                    completeOperation()
+                } catch {
+                    await uploadState.setAborted()
+                    completeOperation()
+                }
+            }
+        }
+        
+        private func uploadPartWithRetry() async throws {
+            var attempt = 0
+            let maxRetries = 3
+
+            while attempt < maxRetries {
+                if await uploadState.isAborted() {
+                    throw UploadError.UploadNotSuccessful
+                }
+
+                do {
+                  
+                    if !NetworkMonitor.shared.isConnected {
+                        let startTime = Date()
+
+                        while !NetworkMonitor.shared.isConnected {
+                            try await Task.sleep(nanoseconds: 20 * 1_000_000_000) // Check every 20 seconds
+                            if Date().timeIntervalSince(startTime) > MAX_WAIT_TIME {
+                                await uploadState.setAborted()
+                                throw UploadError.UploadNotSuccessful
+                            }
+                        }
+                    }
+                    
+                    let etag = try await uploadMultipart.uploadPart(
+                        encryptedChunk: encryptedChunk,
+                        uploadUrl: uploadUrl,
+                        partIndex: partIndex
+                    ) { progress in
+                        self.progressHandler(progress * self.maxProgressPerPart / 100)
+                    }
+
+                    let uploadedPartConfig = UploadedPartConfig(etag: etag, partNumber: partIndex + 1)
+                    await uploadedPartsActor.addUploadedPartConfig(uploadedPartConfig)
+                    return
+                }
+                catch {
+                    if let urlError = error as? URLError,
+                           urlError.code == .notConnectedToInternet || urlError.code == .networkConnectionLost  {
+                    }else {
+                        
+                        attempt += 1
+                        if attempt >= maxRetries {
+                            await uploadState.setAborted()
+                            throw UploadError.PartUploadFailed(partIndex: partIndex, error: error)
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
 }
