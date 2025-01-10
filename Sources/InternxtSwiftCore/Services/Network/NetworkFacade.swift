@@ -132,7 +132,13 @@ public struct NetworkFacade {
         let uploadedPartsActor = UploadedPartsActor()
         let uploadState = UploadState()
         
-        var tasks: [Data] = []
+        input.open()
+        defer { input.close() }
+        
+        let operationQueue = OperationQueue()
+        operationQueue.maxConcurrentOperationCount = 6
+
+        var partIndex = 0
         try await encrypt.encryptFileIntoChunks(
             chunkSizeInBytes: MULTIPART_CHUNK_SIZE,
             totalBytes: fileSize,
@@ -140,32 +146,42 @@ public struct NetworkFacade {
             key: fileKey,
             iv: iv
         ) { encryptedChunk in
-            hasher.update(data: encryptedChunk)
-            tasks.append(encryptedChunk)
-        }
-        
-        let operationQueue = OperationQueue()
-        operationQueue.maxConcurrentOperationCount = 6
-        
-        for (index, encryptedChunk) in tasks.enumerated() {
-            if await uploadedPartsActor.isPartUploaded(partIndex: index) {
-                continue
+            guard await !uploadState.isAborted() else {
+                throw UploadError.UploadNotSuccessful
             }
-            
-            let uploadUrl = uploadUrls[index]
+
+            if await uploadedPartsActor.isPartUploaded(partIndex: partIndex) {
+                partIndex += 1
+                return
+            }
+
+            hasher.update(data: encryptedChunk)
+
+            let uploadUrl = uploadUrls[partIndex]
             let operation = UploadPartOperation(
                 encryptedChunk: encryptedChunk,
-                partIndex: index,
+                partIndex: partIndex,
                 uploadUrl: uploadUrl,
                 uploadMultipart: uploadMultipart,
                 uploadState: uploadState,
                 maxProgressPerPart: maxProgressPerPart,
                 progressHandler: { progress in
-                    progressHandler(progress)
+                    progressHandler(Double(partIndex) / Double(parts) + progress * maxProgressPerPart)
                 },
                 uploadedPartsActor: uploadedPartsActor
             )
+
+            operation.completionBlock = {
+                operation.clearMemory()
+            }
+
+            // Wait until the number of active operations is below the concurrency limit
+            while operationQueue.operationCount >= operationQueue.maxConcurrentOperationCount {
+                await Task.sleep(UInt64(100_000_000))
+            }
+
             operationQueue.addOperation(operation)
+            partIndex += 1
         }
         
         operationQueue.waitUntilAllOperationsAreFinished()
@@ -310,7 +326,7 @@ public struct NetworkFacade {
     }
     
     class UploadPartOperation: AsyncOperation {
-        let encryptedChunk: Data
+        var encryptedChunk: Data?
         let partIndex: Int
         let uploadUrl: String
         let uploadMultipart: UploadMultipart
@@ -373,9 +389,11 @@ public struct NetworkFacade {
                             }
                         }
                     }
-                    
+                    guard let chunk = encryptedChunk else {
+                        throw UploadError.MissingChunk
+                    }
                     let etag = try await uploadMultipart.uploadPart(
-                        encryptedChunk: encryptedChunk,
+                        encryptedChunk: chunk,
                         uploadUrl: uploadUrl,
                         partIndex: partIndex
                     ) { progress in
@@ -400,6 +418,10 @@ public struct NetworkFacade {
 
                 }
             }
+        }
+        
+        func clearMemory() {
+            encryptedChunk = nil
         }
     }
 

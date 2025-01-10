@@ -48,6 +48,7 @@ public enum UploadError: Error, Equatable {
     case UploadNotSuccessful
     case UploadedSizeNotMatching
     case MissingEtag
+    case MissingChunk
     case PartUploadFailed(partIndex: Int, error: Error)
 
     public static func == (lhs: UploadError, rhs: UploadError) -> Bool {
@@ -58,6 +59,7 @@ public enum UploadError: Error, Equatable {
              (.MissingUploadUrl, .MissingUploadUrl),
              (.UploadNotSuccessful, .UploadNotSuccessful),
              (.UploadedSizeNotMatching, .UploadedSizeNotMatching),
+             (.MissingChunk, .MissingChunk),
              (.MissingEtag, .MissingEtag):
             return true
         case let (.PartUploadFailed(lhsPartIndex, lhsError), .PartUploadFailed(rhsPartIndex, rhsError)):
