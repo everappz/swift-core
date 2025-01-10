@@ -150,11 +150,6 @@ public struct NetworkFacade {
                 throw UploadError.UploadNotSuccessful
             }
 
-            if await uploadedPartsActor.isPartUploaded(partIndex: partIndex) {
-                partIndex += 1
-                return
-            }
-
             hasher.update(data: encryptedChunk)
 
             let uploadUrl = uploadUrls[partIndex]
