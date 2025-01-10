@@ -165,14 +165,20 @@ public struct NetworkFacade {
                 uploadMultipart: uploadMultipart,
                 uploadState: uploadState,
                 maxProgressPerPart: maxProgressPerPart,
-                progressHandler: { progress in
-                    progressHandler(Double(partIndex) / Double(parts) + progress * maxProgressPerPart)
-                },
+                progressHandler: { _ in },
                 uploadedPartsActor: uploadedPartsActor
             )
 
             operation.completionBlock = {
                 operation.clearMemory()
+                Task {
+                    
+                    let partsUploaded = await uploadedPartsActor.getUploadedPartsConfigs()
+                    let completedParts = partsUploaded.count
+                    let progress = Double(completedParts) / Double(parts) * 0.99
+                    progressHandler(progress)
+                }
+                
             }
 
             // Wait until the number of active operations is below the concurrency limit
