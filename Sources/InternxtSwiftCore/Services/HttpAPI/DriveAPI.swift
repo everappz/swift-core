@@ -501,4 +501,14 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: GetUpdatedFoldersResponse.self, endpoint, debugResponse: debug)
     }
     
+    
+    public func getPaymentInfo(debug: Bool = false) async throws -> GetPaymentInfoResponse {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/payments/products",
+            method: .GET
+        )
+        
+        return try await apiClient.fetch(type: GetPaymentInfoResponse.self, endpoint, debugResponse: debug)
+    }
+    
 }

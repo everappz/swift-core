@@ -618,3 +618,10 @@ public struct GetExistenceFileInFolderResponse: Codable {
     public let plainName: String
 }
 
+public struct GetPaymentInfoResponse: Decodable {
+    public let featuresPerService : FeaturesPerService
+}
+
+public struct FeaturesPerService: Codable {
+    public let antivirus: Bool
+}
