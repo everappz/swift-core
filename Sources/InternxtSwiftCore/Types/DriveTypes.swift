@@ -624,4 +624,5 @@ public struct GetPaymentInfoResponse: Decodable {
 
 public struct FeaturesPerService: Codable {
     public let antivirus: Bool
+    public let backups: Bool?
 }
