@@ -274,6 +274,17 @@ public struct CreateThumbnailData: Encodable {
         self.size = size
         self.type = type
     }
+    
+    enum CodingKeys: String, CodingKey {
+        case bucket_file = "bucketFile"
+        case bucket_id = "bucketId"
+        case encrypt_version = "encryptVersion"
+        case file_id = "fileId"
+        case max_height = "maxHeight"
+        case max_width = "maxWidth"
+        case size
+        case type
+    }
 }
 
 
@@ -427,7 +438,7 @@ public struct GetLimitResponse: Decodable {
 
 public struct GetDriveUsageResponse: Decodable {
     public let drive: Int64
-    public let backups: Int64
+    public let backups: Int64?
 }
 
 

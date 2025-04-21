@@ -87,9 +87,9 @@ public struct DriveAPI {
     
     public func createThumbnail(createThumbnail: CreateThumbnailData, debug: Bool = false) async throws -> CreateThumbnailResponse {
         let endpoint = Endpoint(
-            path: "\(self.baseUrl)/storage/thumbnail",
+            path: "\(self.baseUrl)/files/thumbnail",
             method: .POST,
-            body: CreateThumbnailPayload(thumbnail: createThumbnail).toJson()
+            body: createThumbnail.toJson()
         )
         
         return try await apiClient.fetch(type: CreateThumbnailResponse.self, endpoint, debugResponse: debug)
@@ -255,12 +255,32 @@ public struct DriveAPI {
             return 200...300 ~= apiClientError.statusCode
         }
     }
+    
+    public func deleteFolderNew(folderId: Int, debug: Bool = false) async throws -> Bool {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/storage/trash/folder/\(folderId)",
+            method: .DELETE
+        )
+
+        do {
+            _ = try await apiClient.fetch(type: DeleteFolderResponse.self, endpoint, debugResponse: debug)
+
+            return true
+        } catch {
+
+            guard let apiClientError = error as? APIClientError else {
+                throw error
+            }
+
+            return 200...300 ~= apiClientError.statusCode
+        }
+    }
 
     public func refreshUser(currentAuthToken: String, debug: Bool = false) async throws -> RefreshUserResponse  {
         
         let apiClient = APIClient(urlSession: URLSession.shared, authorizationHeaderValue: "Bearer \(currentAuthToken)", clientName: clientName, clientVersion: clientVersion)
         let endpoint = Endpoint(
-            path: "\(self.baseUrl)/user/refresh",
+            path: "\(self.baseUrl)/users/refresh",
             method: .GET
         )
         
@@ -280,7 +300,7 @@ public struct DriveAPI {
     
     public func getLimit(debug: Bool = false) async throws -> GetLimitResponse {
         let endpoint = Endpoint(
-            path: "\(self.baseUrl)/limit",
+            path: "\(self.baseUrl)/users/limit",
             method: .GET
         )
         
@@ -289,7 +309,7 @@ public struct DriveAPI {
     
     public func getUsage(debug: Bool = false) async throws -> GetDriveUsageResponse {
         let endpoint = Endpoint(
-            path: "\(self.baseUrl)/usage",
+            path: "\(self.baseUrl)/users/usage",
             method: .GET
         )
         

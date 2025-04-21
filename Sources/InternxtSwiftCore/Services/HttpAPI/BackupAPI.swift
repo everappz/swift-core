@@ -48,6 +48,16 @@ public struct BackupAPI {
 
         return try await apiClient.fetch(type: DeviceAsFolder.self, endpoint, debugResponse: debug)
     }
+    
+    public func editDeviceName(deviceUuid: String, deviceName: String, debug: Bool = false) async throws -> DeviceAsFolder {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/backup/deviceAsFolder/\(deviceUuid)",
+            method: .PATCH,
+            body: EditDevicePayload(deviceName: deviceName).toJson()
+        )
+
+        return try await apiClient.fetch(type: DeviceAsFolder.self, endpoint, debugResponse: debug)
+    }
 
     public func getBackupChilds(folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", debug: Bool = false) async throws -> GetFolderFoldersResponse {
         return try await driveAPI.getFolderFolders(folderId: folderId, offset: offset, limit: limit, sort: sort, debug: debug)
@@ -66,7 +76,7 @@ public struct BackupAPI {
     }
 
     public func deleteBackupFolder(folderId: Int, debug: Bool = false) async throws -> Bool {
-        return try await driveAPI.deleteFolder(folderId: folderId, debug: debug)
+        return try await driveAPI.deleteFolderNew(folderId: folderId, debug: debug)
     }
 
     public func replaceFileId(fileUuid: String, newFileId: String, newSize: Int, debug: Bool = false) async throws -> ReplaceFileResponse {
