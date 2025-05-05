@@ -95,11 +95,11 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: CreateThumbnailResponse.self, endpoint, debugResponse: debug)
     }
     
-    public func createThumbnailOld(createThumbnail: CreateThumbnailData, debug: Bool = false) async throws -> CreateThumbnailResponse {
+    public func createThumbnailOld(createThumbnail: CreateThumbnailDataOld, debug: Bool = false) async throws -> CreateThumbnailResponse {
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/storage/thumbnail",
             method: .POST,
-            body: CreateThumbnailPayload(thumbnail: createThumbnail).toJson()
+            body: CreateThumbnailPayloadOld(thumbnail: createThumbnail).toJson()
         )
         
         return try await apiClient.fetch(type: CreateThumbnailResponse.self, endpoint, debugResponse: debug)

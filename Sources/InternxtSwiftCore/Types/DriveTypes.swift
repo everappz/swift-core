@@ -287,9 +287,34 @@ public struct CreateThumbnailData: Encodable {
     }
 }
 
+public struct CreateThumbnailDataOld: Encodable {
+    public let bucket_file: String
+    public let bucket_id: String
+    public let encrypt_version = "03-aes"
+    public let file_id: Int
+    public let max_height: Int
+    public let max_width: Int
+    public let size: Int64
+    public let type: String
+    
+    public init(bucketFile: String, bucketId: String, fileId: Int, height: Int, width: Int, size: Int64, type: String) {
+        self.bucket_file = bucketFile
+        self.bucket_id = bucketId
+        self.file_id = fileId
+        self.max_height = height
+        self.max_width = width
+        self.size = size
+        self.type = type
+    }
+}
+
 
 public struct CreateThumbnailPayload: Encodable {
     public let thumbnail: CreateThumbnailData
+}
+
+public struct CreateThumbnailPayloadOld: Encodable {
+    public let thumbnail: CreateThumbnailDataOld
 }
 
 public struct CreateThumbnailResponse: Decodable {
