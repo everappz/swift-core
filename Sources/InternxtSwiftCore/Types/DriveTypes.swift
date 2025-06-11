@@ -259,14 +259,14 @@ public struct CreateThumbnailData: Encodable {
     public let bucket_file: String
     public let bucket_id: String
     public let encrypt_version = "03-aes"
-    public let file_id: Int
+    public let file_id: Int?
     public let max_height: Int
     public let max_width: Int
     public let size: Int64
     public let type: String
     public let fileUuid: String
     
-    public init(bucketFile: String, bucketId: String, fileId: Int, height: Int, width: Int, size: Int64, type: String,fileUuid: String) {
+    public init(bucketFile: String, bucketId: String,fileId: Int? = nil, height: Int, width: Int, size: Int64, type: String,fileUuid: String) {
         self.bucket_file = bucketFile
         self.bucket_id = bucketId
         self.file_id = fileId
