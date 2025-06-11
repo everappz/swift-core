@@ -264,8 +264,9 @@ public struct CreateThumbnailData: Encodable {
     public let max_width: Int
     public let size: Int64
     public let type: String
+    public let fileUuid: String
     
-    public init(bucketFile: String, bucketId: String, fileId: Int, height: Int, width: Int, size: Int64, type: String) {
+    public init(bucketFile: String, bucketId: String, fileId: Int, height: Int, width: Int, size: Int64, type: String,fileUuid: String) {
         self.bucket_file = bucketFile
         self.bucket_id = bucketId
         self.file_id = fileId
@@ -273,6 +274,7 @@ public struct CreateThumbnailData: Encodable {
         self.max_width = width
         self.size = size
         self.type = type
+        self.fileUuid = fileUuid
     }
     
     enum CodingKeys: String, CodingKey {
@@ -284,6 +286,7 @@ public struct CreateThumbnailData: Encodable {
         case max_width = "maxWidth"
         case size
         case type
+        case fileUuid
     }
 }
 
