@@ -12,9 +12,11 @@ public struct APIClientError: Error {
     public var statusCode: Int
     public var responseBody: Data
     private var message: String
+
     public var localizedDescription: String {
         return self.message
     }
+
     public init(statusCode: Int, message: String, responseBody: Data = Data()) {
         self.statusCode = statusCode
         self.message = message
@@ -22,105 +24,136 @@ public struct APIClientError: Error {
     }
 }
 
-
+// MARK: - APIClient
 
 @available(macOS 10.15, *)
 struct APIClient {
-    var urlSession: URLSession = URLSession.shared
+    var urlSession: URLSession = .shared
     var authorizationHeaderValue: String? = nil
     var clientName: String? = nil
     var clientVersion: String? = nil
     var workspaceHeader: String? = nil
     var authorizationHeaderGatewayValue: String? = nil
 
-    
-    
-  
-    func fetch<T: Decodable>(type: T.Type? , _ endpoint: Endpoint, debugResponse: Bool?) async throws -> T  {
-        let request: URLRequest = try buildURLRequest(endpoint: endpoint)
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            
-            let task = urlSession.dataTask(with: request) { (data, response, error) in
-                if let error = error {
-                    if debugResponse == true {
-                        print("API CLIENT ERROR", error)
-                    }
-                    continuation.resume(with: .failure(APIError.failedRequest(error.localizedDescription)))
-                    return
-                }
-                
-                func finishWithErrorMessage(message: String) {
-                    
-                }
-                let httpResponse = response as! HTTPURLResponse
+    private let rateLimiter = RateLimiter(maxRequestsPerSecond: 4)
 
-                do {
-                    
-                    if data == nil {
-                        throw APIClientError(statusCode: httpResponse.statusCode, message: "Response is empty")
+    func fetch<T: Decodable>(
+        type: T.Type?,
+        _ endpoint: Endpoint,
+        debugResponse: Bool? = false
+    ) async throws -> T {
+        let request: URLRequest = try buildURLRequest(endpoint: endpoint)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let taskBlock = {
+                let task = urlSession.dataTask(with: request) { data, response, error in
+                    if let error = error {
+                        if debugResponse == true {
+                            print("❌ API CLIENT ERROR", error)
+                        }
+                        continuation.resume(with: .failure(APIClientError(statusCode: -1, message: error.localizedDescription)))
+                        return
                     }
-                    
-                    if(debugResponse == true) {
-                        print("\(endpoint.path) response is \(String(decoding: data!, as: UTF8.self))")
+
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        continuation.resume(with: .failure(APIClientError(statusCode: -1, message: "Invalid response")))
+                        return
                     }
-                    let json = try JSONDecoder().decode(T.self, from: data!)
-                    continuation.resume(with:.success(json))
-                } catch let DecodingError.dataCorrupted(context) {
-                    let message = context.debugDescription
-                    continuation.resume(with:.failure(APIClientError(statusCode: httpResponse.statusCode, message: message, responseBody: data ?? Data())))
-                } catch let DecodingError.keyNotFound(key, context) {
-                    let message = "Key '\(key)' not found: \(context.debugDescription)"
-                    continuation.resume(with:.failure(APIClientError(statusCode: httpResponse.statusCode, message: message, responseBody: data ?? Data())))
-                } catch let DecodingError.valueNotFound(value, context) {
-                    let message = "Value '\(value)' not found: \(context.debugDescription)"
-                    continuation.resume(with:.failure(APIClientError(statusCode: httpResponse.statusCode, message: message, responseBody: data ?? Data())))
-                } catch let DecodingError.typeMismatch(type, context)  {
-                    let message = "Type '\(type)' mismatch: \(context.debugDescription)"
-                    continuation.resume(with:.failure(APIClientError(statusCode: httpResponse.statusCode, message: message, responseBody: data ?? Data())))
-                } catch {
-                    let message = error.localizedDescription
-                    continuation.resume(with:.failure(APIClientError(statusCode: httpResponse.statusCode, message: message, responseBody: data ?? Data())))
+
+                    do {
+                        guard let data = data else {
+                            throw APIClientError(statusCode: httpResponse.statusCode, message: "Empty response")
+                        }
+
+                        if debugResponse == true {
+                            print("✅ \(endpoint.path) response: \(String(decoding: data, as: UTF8.self))")
+                        }
+
+                        let decoded = try JSONDecoder().decode(T.self, from: data)
+                        continuation.resume(returning: decoded)
+                    } catch {
+                        continuation.resume(with: .failure(APIClientError(
+                            statusCode: httpResponse.statusCode,
+                            message: error.localizedDescription,
+                            responseBody: data ?? Data()
+                        )))
+                    }
                 }
+
+                task.resume()
             }
-            task.resume()
+
+            rateLimiter.enqueue(taskBlock)
         }
     }
-    
-    
+
     private func buildURLRequest(endpoint: Endpoint) throws -> URLRequest {
         guard let url = URL(string: endpoint.path) else {
             throw APIClientError(statusCode: -1, message: "Unable to build URL from \(endpoint.path)")
         }
-   
-        var urlRequest = URLRequest(url: url )
-        urlRequest.httpMethod = endpoint.method.rawValue.lowercased()
-        
-       
-        
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = endpoint.method.rawValue.uppercased()
+
         if let authorizationHeaderValue = self.authorizationHeaderValue {
-            urlRequest.setValue(authorizationHeaderValue, forHTTPHeaderField:"Authorization")
+            urlRequest.setValue(authorizationHeaderValue, forHTTPHeaderField: "Authorization")
         }
-        
+
         if let workspaceHeaderValue = self.workspaceHeader {
-            urlRequest.setValue(workspaceHeaderValue, forHTTPHeaderField:"x-internxt-workspace")
+            urlRequest.setValue(workspaceHeaderValue, forHTTPHeaderField: "x-internxt-workspace")
         }
-        
+
         if let authorizationHeaderGatewayValue = self.authorizationHeaderGatewayValue {
-            urlRequest.setValue(self.authorizationHeaderGatewayValue, forHTTPHeaderField:"x-internxt-desktop-header")
+            urlRequest.setValue(authorizationHeaderGatewayValue, forHTTPHeaderField: "x-internxt-desktop-header")
         }
 
         urlRequest.setValue(clientName, forHTTPHeaderField: "internxt-client")
         urlRequest.setValue(clientVersion, forHTTPHeaderField: "internxt-version")
-        
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
         if let body = endpoint.body {
             urlRequest.httpBody = body
         }
-        
-            
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         return urlRequest
     }
 }
 
+// MARK: - Rate Limiter
+
+final class RateLimiter {
+    private let maxRequestsPerSecond: Int
+    private let queue = DispatchQueue(label: "com.internxt.api.ratelimiter", qos: .userInitiated)
+    private var requestQueue: [() -> Void] = []
+    private var timer: DispatchSourceTimer?
+
+    init(maxRequestsPerSecond: Int) {
+        self.maxRequestsPerSecond = maxRequestsPerSecond
+        startTimer()
+    }
+
+    private func startTimer() {
+        let interval = 1.0 / Double(maxRequestsPerSecond)
+
+        timer = DispatchSource.makeTimerSource(queue: queue)
+        timer?.schedule(deadline: .now(), repeating: interval)
+        timer?.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            if !self.requestQueue.isEmpty {
+                let task = self.requestQueue.removeFirst()
+                task()
+            }
+        }
+        timer?.resume()
+    }
+
+    func enqueue(_ block: @escaping () -> Void) {
+        queue.async {
+            self.requestQueue.append(block)
+        }
+    }
+
+    deinit {
+        timer?.cancel()
+    }
+}
