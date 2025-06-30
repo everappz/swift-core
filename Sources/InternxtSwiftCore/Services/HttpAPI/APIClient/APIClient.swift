@@ -11,90 +11,327 @@ import Combine
 public struct APIClientError: Error {
     public var statusCode: Int
     public var responseBody: Data
+    public var headers: [String: String]
     private var message: String
 
     public var localizedDescription: String {
         return self.message
     }
-
-    public init(statusCode: Int, message: String, responseBody: Data = Data()) {
+    
+    public init(statusCode: Int, message: String, responseBody: Data = Data(), headers: [String: String] = [:]) {
         self.statusCode = statusCode
         self.message = message
         self.responseBody = responseBody
+        self.headers = headers
     }
 }
 
-// MARK: - APIClient
+public struct RateLimitConfiguration {
+    let maxConcurrentRequests: Int
+    let requestsPerSecond: Double
+    let burstCapacity: Int
+    let maxRetries: Int
+    let baseDelay: TimeInterval
+    let maxDelay: TimeInterval
+    let backoffMultiplier: Double
+    
+    public init(maxConcurrentRequests: Int = 8,
+                requestsPerSecond: Double = 8.0,
+                burstCapacity: Int = 20,
+                maxRetries: Int = 3,
+                baseDelay: TimeInterval = 1.0,
+                maxDelay: TimeInterval = 120.0,
+                backoffMultiplier: Double = 2.0) {
+        self.maxConcurrentRequests = maxConcurrentRequests
+        self.requestsPerSecond = requestsPerSecond
+        self.burstCapacity = burstCapacity
+        self.maxRetries = maxRetries
+        self.baseDelay = baseDelay
+        self.maxDelay = maxDelay
+        self.backoffMultiplier = backoffMultiplier
+    }
+}
+
+actor TokenBucket {
+    private var tokens: Double
+    private let capacity: Double
+    private let refillRate: Double
+    private var lastRefill: Date
+    private let maxTrackingInterval: TimeInterval = 300
+   
+    init(capacity: Double, refillRate: Double) {
+        self.capacity = capacity
+        self.refillRate = refillRate
+        self.tokens = capacity
+        self.lastRefill = Date()
+    }
+    
+    func consume() async -> Bool {
+        refillTokens()
+        
+        if tokens >= 1.0 {
+            tokens -= 1.0
+            return true
+        }
+        return false
+    }
+    
+    private func refillTokens() {
+        let now = Date()
+        let elapsed = now.timeIntervalSince(lastRefill)
+        
+        let cappedElapsed = min(elapsed, maxTrackingInterval)
+        let tokensToAdd = cappedElapsed * refillRate
+        
+        tokens = min(capacity, tokens + tokensToAdd)
+        lastRefill = now
+    }
+        
+    func waitTimeForNextToken() async -> TimeInterval {
+        refillTokens()
+        if tokens >= 1.0 {
+            return 0
+        }
+        return min((1.0 - tokens) / refillRate, maxTrackingInterval)
+    }
+}
+
+actor RateLimitState {
+    private var isServerThrottled: Bool = false
+    private var throttleEndTime: Date?
+    private var consecutiveFailures: Int = 0
+    private var lastFailureTime: Date?
+    
+    func markServerThrottled(duration: TimeInterval) {
+        isServerThrottled = true
+        throttleEndTime = Date().addingTimeInterval(duration)
+        consecutiveFailures += 1
+        lastFailureTime = Date()
+    }
+    
+    func markSuccessfulRequest() {
+        if consecutiveFailures > 0 {
+            consecutiveFailures = max(0, consecutiveFailures - 1)
+        }
+        
+        if consecutiveFailures == 0 {
+            isServerThrottled = false
+            throttleEndTime = nil
+        }
+    }
+    
+    func shouldThrottle() -> (shouldWait: Bool, waitTime: TimeInterval) {
+        let now = Date()
+        
+        if let throttleEnd = throttleEndTime, now < throttleEnd {
+            return (true, throttleEnd.timeIntervalSince(now))
+        }
+        
+        if consecutiveFailures > 0, let lastFailure = lastFailureTime {
+            let timeSinceLastFailure = now.timeIntervalSince(lastFailure)
+            let expectedWaitTime = Double(consecutiveFailures) * 2.0
+            
+            if timeSinceLastFailure < expectedWaitTime {
+                return (true, expectedWaitTime - timeSinceLastFailure)
+            }
+        }
+        
+        return (false, 0)
+    }
+    
+    func getConsecutiveFailures() -> Int {
+        return consecutiveFailures
+    }
+}
+
+actor BoundedAsyncSemaphore {
+    private var count: Int
+    private var waiters: [WaiterInfo] = []
+    private let maxWaiters: Int
+    
+    private struct WaiterInfo {
+        let id: UUID
+        let continuation: CheckedContinuation<Void, Error>
+    }
+    
+    init(value: Int, maxWaiters: Int = 100) {
+        self.count = value
+        self.maxWaiters = maxWaiters
+    }
+    
+    func wait() async throws {
+        if count > 0 {
+            count -= 1
+            return
+        }
+        
+        guard waiters.count < maxWaiters else {
+            throw APIClientError(statusCode: -2, message: "Request queue full")
+        }
+        
+        let waiterID = UUID()
+        
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let waiterInfo = WaiterInfo(id: waiterID, continuation: continuation)
+                waiters.append(waiterInfo)
+            }
+        } onCancel: {
+            Task {
+                await self.removeCancelledWaiter(id: waiterID)
+            }
+        }
+    }
+    
+    private func removeCancelledWaiter(id: UUID) {
+        if let index = waiters.firstIndex(where: { $0.id == id }) {
+            let cancelledWaiter = waiters.remove(at: index)
+            cancelledWaiter.continuation.resume(throwing: CancellationError())
+        }
+    }
+    
+    func signal() {
+        if waiters.isEmpty {
+            count += 1
+        } else {
+            let waiter = waiters.removeFirst()
+            waiter.continuation.resume()
+        }
+    }
+}
+
+private class DateFormatterCache {
+    static let shared = DateFormatterCache()
+    
+    private let formatters: [DateFormatter] = {
+        let formats = [
+            "EEE, dd MMM yyyy HH:mm:ss zzz",
+            "EEEE, dd-MMM-yy HH:mm:ss zzz",
+            "EEE MMM dd HH:mm:ss yyyy"
+        ]
+        
+        return formats.map { format in
+            let formatter = DateFormatter()
+            formatter.dateFormat = format
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(abbreviation: "GMT")
+            return formatter
+        }
+    }()
+    
+    func parseHTTPDate(_ dateString: String) -> Date? {
+        for formatter in formatters {
+            if let date = formatter.date(from: dateString) {
+                return date
+            }
+        }
+        return nil
+    }
+}
 
 @available(macOS 10.15, *)
 struct APIClient {
-    var urlSession: URLSession = .shared
+    var urlSession: URLSession
     var authorizationHeaderValue: String? = nil
     var clientName: String? = nil
     var clientVersion: String? = nil
     var workspaceHeader: String? = nil
     var authorizationHeaderGatewayValue: String? = nil
-
-    private let rateLimiter = RateLimiter(maxRequestsPerSecond: 4)
-
-    func fetch<T: Decodable>(
-        type: T.Type?,
-        _ endpoint: Endpoint,
-        debugResponse: Bool? = false
-    ) async throws -> T {
-        let request: URLRequest = try buildURLRequest(endpoint: endpoint)
-
-        return try await withCheckedThrowingContinuation { continuation in
-            let taskBlock = {
-                let task = urlSession.dataTask(with: request) { data, response, error in
-                    if let error = error {
-                        if debugResponse == true {
-                            print("❌ API CLIENT ERROR", error)
-                        }
-                        continuation.resume(with: .failure(APIClientError(statusCode: -1, message: error.localizedDescription)))
-                        return
-                    }
-
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        continuation.resume(with: .failure(APIClientError(statusCode: -1, message: "Invalid response")))
-                        return
-                    }
-
-                    do {
-                        guard let data = data else {
-                            throw APIClientError(statusCode: httpResponse.statusCode, message: "Empty response")
-                        }
-
-                        if debugResponse == true {
-                            print("✅ \(endpoint.path) response: \(String(decoding: data, as: UTF8.self))")
-                        }
-
-                        let decoded = try JSONDecoder().decode(T.self, from: data)
-                        continuation.resume(returning: decoded)
-                    } catch {
-                        continuation.resume(with: .failure(APIClientError(
-                            statusCode: httpResponse.statusCode,
-                            message: error.localizedDescription,
-                            responseBody: data ?? Data()
-                        )))
-                    }
-                }
-
-                task.resume()
-            }
-
-            rateLimiter.enqueue(taskBlock)
-        }
+    
+    var rateLimitConfiguration: RateLimitConfiguration
+        
+    private let tokenBucket: TokenBucket
+    private let rateLimitState: RateLimitState
+    private let semaphore: BoundedAsyncSemaphore
+    
+    init(
+        urlSession: URLSession = .shared,
+        authorizationHeaderValue: String? = nil,
+        clientName: String? = nil,
+        clientVersion: String? = nil,
+        workspaceHeader: String? = nil,
+        authorizationHeaderGatewayValue: String? = nil,
+        rateLimitConfiguration: RateLimitConfiguration = RateLimitConfiguration()
+    ) {
+        self.urlSession = urlSession
+        self.authorizationHeaderValue = authorizationHeaderValue
+        self.clientName = clientName
+        self.clientVersion = clientVersion
+        self.workspaceHeader = workspaceHeader
+        self.authorizationHeaderGatewayValue = authorizationHeaderGatewayValue
+        self.rateLimitConfiguration = rateLimitConfiguration
+        self.tokenBucket = TokenBucket(
+            capacity: Double(rateLimitConfiguration.burstCapacity),
+            refillRate: rateLimitConfiguration.requestsPerSecond
+        )
+        self.rateLimitState = RateLimitState()
+        self.semaphore = BoundedAsyncSemaphore(
+            value: rateLimitConfiguration.maxConcurrentRequests,
+            maxWaiters: 50
+        )
     }
-
+    
+    func fetch<T: Decodable>(type: T.Type?, _ endpoint: Endpoint, debugResponse: Bool? = nil) async throws -> T {
+        return try await fetchWithRateLimit(type: type, endpoint, debugResponse: debugResponse)
+    }
+    
+    private func fetchWithRateLimit<T: Decodable>(type: T.Type?, _ endpoint: Endpoint, debugResponse: Bool?) async throws -> T {
+        try await semaphore.wait()
+        
+        defer {
+            Task {
+                await semaphore.signal()
+            }
+        }
+        
+        let (shouldWait, waitTime) = await rateLimitState.shouldThrottle()
+        if shouldWait {
+            if debugResponse == true {
+                print("Waiting \(waitTime)s due to server throttling")
+            }
+            try await Task.sleep(nanoseconds: UInt64(waitTime * 1_000_000_000))
+        }
+        
+        // Token bucket rate limiting
+        while !(await tokenBucket.consume()) {
+            let waitTime = await tokenBucket.waitTimeForNextToken()
+            if debugResponse == true {
+                print("Rate limiting locally - waiting \(waitTime)s")
+            }
+            try await Task.sleep(nanoseconds: UInt64(waitTime * 1_000_000_000))
+        }
+        
+        return try await fetchWithRetry(type: type, endpoint, debugResponse: debugResponse, attempt: 0)
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func shouldRetry(attempt: Int) -> Bool {
+        return attempt < rateLimitConfiguration.maxRetries
+    }
+    
+    private func calculateDelay(attempt: Int) -> TimeInterval {
+        let exponentialDelay = rateLimitConfiguration.baseDelay * pow(rateLimitConfiguration.backoffMultiplier, Double(attempt))
+        let jitter = Double.random(in: 0...0.1) * exponentialDelay
+        return min(exponentialDelay + jitter, rateLimitConfiguration.maxDelay)
+    }
+    
+    private func calculateAdaptiveDelay(attempt: Int) async -> TimeInterval {
+        let failures = await rateLimitState.getConsecutiveFailures()
+        let baseDelay = rateLimitConfiguration.baseDelay * pow(rateLimitConfiguration.backoffMultiplier, Double(attempt))
+        let adaptiveMultiplier = 1.0 + (Double(failures) * 0.5)
+        
+        return min(baseDelay * adaptiveMultiplier, rateLimitConfiguration.maxDelay)
+    }
+    
     private func buildURLRequest(endpoint: Endpoint) throws -> URLRequest {
         guard let url = URL(string: endpoint.path) else {
             throw APIClientError(statusCode: -1, message: "Unable to build URL from \(endpoint.path)")
         }
 
         var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = endpoint.method.rawValue.uppercased()
-
+        urlRequest.httpMethod = endpoint.method.rawValue.lowercased()
+        
         if let authorizationHeaderValue = self.authorizationHeaderValue {
             urlRequest.setValue(authorizationHeaderValue, forHTTPHeaderField: "Authorization")
         }
@@ -117,43 +354,211 @@ struct APIClient {
 
         return urlRequest
     }
-}
-
-// MARK: - Rate Limiter
-
-final class RateLimiter {
-    private let maxRequestsPerSecond: Int
-    private let queue = DispatchQueue(label: "com.internxt.api.ratelimiter", qos: .userInitiated)
-    private var requestQueue: [() -> Void] = []
-    private var timer: DispatchSourceTimer?
-
-    init(maxRequestsPerSecond: Int) {
-        self.maxRequestsPerSecond = maxRequestsPerSecond
-        startTimer()
-    }
-
-    private func startTimer() {
-        let interval = 1.0 / Double(maxRequestsPerSecond)
-
-        timer = DispatchSource.makeTimerSource(queue: queue)
-        timer?.schedule(deadline: .now(), repeating: interval)
-        timer?.setEventHandler { [weak self] in
-            guard let self = self else { return }
-            if !self.requestQueue.isEmpty {
-                let task = self.requestQueue.removeFirst()
-                task()
+    
+    private func extractRetryAfter(from error: APIClientError) -> TimeInterval? {
+        let retryAfterValue = error.headers.first { key, _ in
+            key.lowercased() == "retry-after"
+        }?.value
+        
+        guard let retryAfterString = retryAfterValue else {
+            return nil
+        }
+        
+        if let seconds = TimeInterval(retryAfterString) {
+            return min(max(seconds, 1), 3600)
+        }
+        
+        if let date = DateFormatterCache.shared.parseHTTPDate(retryAfterString) {
+            let timeInterval = date.timeIntervalSinceNow
+            if timeInterval > 0 && timeInterval <= 3600 {
+                return timeInterval
             }
         }
-        timer?.resume()
-    }
-
-    func enqueue(_ block: @escaping () -> Void) {
-        queue.async {
-            self.requestQueue.append(block)
-        }
-    }
-
-    deinit {
-        timer?.cancel()
+        
+        return nil
     }
 }
+
+struct APIErrorResponse: Decodable {
+    let message: String
+    let error: String?
+    let statusCode: Int
+}
+
+// MARK: - Request Execution
+extension APIClient {
+    
+    private actor URLSessionTaskActor {
+        weak var task: URLSessionTask?
+
+        func setTask(_ task: URLSessionTask) {
+            self.task = task
+        }
+
+        func cancel() {
+            task?.cancel()
+        }
+    }
+    
+    private func performRequest<T: Decodable>(type: T.Type?, _ endpoint: Endpoint, debugResponse: Bool?) async throws -> T {
+        let request: URLRequest = try buildURLRequest(endpoint: endpoint)
+        
+        let taskActor = URLSessionTaskActor()
+        
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let task = urlSession.dataTask(with: request) { (data, response, error) in
+                 
+                    if Task.isCancelled {
+                        continuation.resume(with: .failure(CancellationError()))
+                        return
+                    }
+                    
+                    if let error = error {
+                        if let urlError = error as? URLError, urlError.code == .cancelled {
+                            continuation.resume(with: .failure(CancellationError()))
+                            return
+                        }
+                        if debugResponse == true {
+                            print("API CLIENT ERROR", error)
+                        }
+                        continuation.resume(with: .failure(APIClientError(statusCode: -1, message: error.localizedDescription)))
+                        return
+                    }
+                    
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        continuation.resume(with: .failure(APIClientError(statusCode: -1, message: "No HTTP response")))
+                        return
+                    }
+                    
+                    let headers = httpResponse.allHeaderFields.reduce(into: [String: String]()) { result, header in
+                        if let key = header.key as? String, let value = header.value as? String {
+                            result[key] = value
+                        }
+                    }
+                    
+                    do {
+                        guard let data = data else {
+                            throw APIClientError(
+                                statusCode: httpResponse.statusCode,
+                                message: "Response is empty",
+                                headers: headers
+                            )
+                        }
+                        
+                        if !(200...399).contains(httpResponse.statusCode) {
+                            let errorMessage: String
+                            
+                            if let decodedError = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                                errorMessage = decodedError.message
+                            } else {
+                                errorMessage = HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+                            }
+                            
+                            let apiError = APIClientError(
+                                statusCode: httpResponse.statusCode,
+                                message: errorMessage,
+                                responseBody: data,
+                                headers: headers
+                            )
+                            
+                            continuation.resume(with: .failure(apiError))
+                            return
+                        }
+                        
+                        if debugResponse == true {
+                            print("\(endpoint.path) response is \(String(decoding: data, as: UTF8.self))")
+                        }
+                        
+                        let json = try JSONDecoder().decode(T.self, from: data)
+                        continuation.resume(with: .success(json))
+                        
+                    } catch let decodingError as DecodingError {
+                        let message = decodingError.localizedDescription
+                        continuation.resume(with: .failure(APIClientError(
+                            statusCode: httpResponse.statusCode,
+                            message: message,
+                            responseBody: data ?? Data(),
+                            headers: headers
+                        )))
+                    } catch {
+                        let message = error.localizedDescription
+                        continuation.resume(with: .failure(APIClientError(
+                            statusCode: httpResponse.statusCode,
+                            message: message,
+                            responseBody: data ?? Data(),
+                            headers: headers
+                        )))
+                    }
+                }
+                
+               
+                Task {
+                    await taskActor.setTask(task)
+                }
+                
+                task.resume()
+            }
+        } onCancel: {
+            
+            Task {
+                await taskActor.cancel()
+            }
+        }
+    }
+    
+    private func fetchWithRetry<T: Decodable>(type: T.Type?, _ endpoint: Endpoint, debugResponse: Bool?, attempt: Int) async throws -> T {
+        try Task.checkCancellation()
+        
+        do {
+            let result: T = try await performRequest(type: type, endpoint, debugResponse: debugResponse)
+            await rateLimitState.markSuccessfulRequest()
+            return result
+            
+        } catch is CancellationError {
+            throw CancellationError()
+            
+        } catch let error as APIClientError {
+            if error.statusCode == 429 {
+                let serverRetryAfter = extractRetryAfter(from: error)
+                let waitTime: TimeInterval
+                
+                if let retryAfter = serverRetryAfter {
+                    waitTime = retryAfter
+                    if debugResponse == true {
+                        print("🔄 Server says wait \(retryAfter)s (Retry-After header)")
+                    }
+                } else {
+                    waitTime = await calculateAdaptiveDelay(attempt: attempt)
+                    if debugResponse == true {
+                        print("🔄 No Retry-After header, using adaptive delay: \(waitTime)s")
+                    }
+                }
+                
+                await rateLimitState.markServerThrottled(duration: waitTime)
+                
+                if shouldRetry(attempt: attempt) {
+                    if debugResponse == true {
+                        print("429 Rate Limited - Retrying after \(waitTime)s (attempt \(attempt + 1)/\(rateLimitConfiguration.maxRetries + 1))")
+                    }
+                    
+                    try await Task.sleep(nanoseconds: UInt64(waitTime * 1_000_000_000))
+                    return try await fetchWithRetry(type: type, endpoint, debugResponse: debugResponse, attempt: attempt + 1)
+                }
+                
+            } else if (500...599).contains(error.statusCode) && shouldRetry(attempt: attempt) {
+                let delay = calculateDelay(attempt: attempt)
+                
+                if debugResponse == true {
+                    print("Server error \(error.statusCode) - Retrying in \(delay)s")
+                }
+                
+                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                return try await fetchWithRetry(type: type, endpoint, debugResponse: debugResponse, attempt: attempt + 1)
+            }
+            
+            throw error
+        }
+    }
+}
+
