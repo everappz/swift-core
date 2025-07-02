@@ -542,4 +542,12 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: GetPaymentInfoResponse.self, endpoint, debugResponse: debug)
     }
     
+    public func logout(debug: Bool = false) async throws -> LogoutResponse {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/auth/logout",
+            method: .GET
+        )
+        
+        return try await apiClient.fetch(type: LogoutResponse.self, endpoint, debugResponse: debug)
+    }
 }

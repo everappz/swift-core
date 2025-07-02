@@ -403,8 +403,9 @@ public struct DriveUser: Codable {
 }
 
 public struct RefreshUserResponse: Decodable {
-    public let token: String
+    public let token: String?
     public let user: DriveUser
+    public let newToken: String
 }
 
 public struct RefreshTokensResponse: Decodable {
@@ -665,3 +666,8 @@ public struct FeaturesPerService: Codable {
     public let antivirus: Bool
     public let backups: Bool?
 }
+
+public struct LogoutResponse: Decodable {
+    public let logout : Bool
+}
+
