@@ -241,7 +241,7 @@ struct APIClient {
     var rateLimitConfiguration: RateLimitConfiguration
         
     private let tokenBucket: TokenBucket
-    private let rateLimitState: RateLimitState
+    internal let rateLimitState: RateLimitState
     private let semaphore: BoundedAsyncSemaphore
     
     init(
@@ -316,7 +316,7 @@ struct APIClient {
         return min(exponentialDelay + jitter, rateLimitConfiguration.maxDelay)
     }
     
-    private func calculateAdaptiveDelay(attempt: Int) async -> TimeInterval {
+    internal func calculateAdaptiveDelay(attempt: Int) async -> TimeInterval {
         let failures = await rateLimitState.getConsecutiveFailures()
         let baseDelay = rateLimitConfiguration.baseDelay * pow(rateLimitConfiguration.backoffMultiplier, Double(attempt))
         let adaptiveMultiplier = 1.0 + (Double(failures) * 0.5)
@@ -561,4 +561,3 @@ extension APIClient {
         }
     }
 }
-
