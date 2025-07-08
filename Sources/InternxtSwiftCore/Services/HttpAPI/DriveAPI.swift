@@ -550,4 +550,15 @@ public struct DriveAPI {
         
         return try await apiClient.fetch(type: LogoutResponse.self, endpoint, debugResponse: debug)
     }
+    
+    public func getFolderExistencesInFolder(folderParentUuid: String, folderName: String, debug: Bool = false) async throws -> ExistentFoldersResponse {
+        let payload = PlainNamesPayload(plainNames: [folderName])
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/content/\(folderParentUuid)/folders/existence",
+            method: .POST,
+            body: payload.toJson()
+        )
+        
+        return try await apiClient.fetch(type: ExistentFoldersResponse.self, endpoint, debugResponse: debug)
+    }
 }

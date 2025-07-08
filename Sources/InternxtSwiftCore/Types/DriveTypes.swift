@@ -671,3 +671,31 @@ public struct LogoutResponse: Decodable {
     public let logout : Bool
 }
 
+
+public struct ExistentFoldersResponse: Decodable {
+    public let existentFolders: [FolderResponse]
+}
+
+public struct FolderResponse: Decodable {
+    public let type: String
+    public let id: Int
+    public let parentId: Int?
+    public let parentUuid: String?
+    public let name: String
+    public let encryptVersion: String
+    public let createdAt: String
+    public let updatedAt: String
+    public let uuid: String
+    public let plainName: String
+    public let size: Int
+    public let removed: Bool
+    public let status: String
+}
+
+public struct PlainNamesPayload: Encodable {
+    public let plainNames: Array<String>
+    
+    public init(plainNames: Array<String>) {
+        self.plainNames = plainNames
+    }
+}
