@@ -554,7 +554,7 @@ public struct DriveAPI {
     public func getFolderExistencesInFolder(folderParentUuid: String, folderName: String, debug: Bool = false) async throws -> ExistentFoldersResponse {
         let payload = PlainNamesPayload(plainNames: [folderName])
         let endpoint = Endpoint(
-            path: "\(self.baseUrl)/content/\(folderParentUuid)/folders/existence",
+            path: "\(self.baseUrl)/folders/content/\(folderParentUuid)/folders/existence",
             method: .POST,
             body: payload.toJson()
         )
