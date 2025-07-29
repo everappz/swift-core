@@ -86,4 +86,8 @@ public struct BackupAPI {
     public func replaceFileId(fileUuid: String, newFileId: String, newSize: Int, debug: Bool = false) async throws -> ReplaceFileResponse {
         return try await driveAPI.replaceFileId(fileUuid: fileUuid, newFileId: newFileId, newSize: newSize, debug: debug)
     }
+    
+    public func getExistenceFileInFolderByPlainName(uuid: String, files: Array<ExistenceFile>, debug: Bool = false) async throws  -> ExistenceFilesResponse {
+        return try await driveAPI.getExistenceFileInFolderByPlainName(uuid: uuid, files: files)
+    }
 }
