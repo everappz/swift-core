@@ -535,7 +535,7 @@ public struct DriveAPI {
     
     public func getPaymentInfo(debug: Bool = false) async throws -> GetPaymentInfoResponse {
         let endpoint = Endpoint(
-            path: "\(self.baseUrl)/payments/products",
+            path: "\(self.baseUrl)/payments/products/tier",
             method: .GET
         )
         
