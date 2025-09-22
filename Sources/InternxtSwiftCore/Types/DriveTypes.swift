@@ -659,7 +659,7 @@ public struct GetExistenceFileInFolderResponse: Codable {
 }
 
 public struct GetPaymentInfoResponse: Decodable {
-    public let featuresPerService : FeaturesPerServiceNew
+    public let featuresPerService : FeaturesPerService
 }
 
 public struct FeaturesPerService: Codable {
@@ -700,29 +700,29 @@ public struct PlainNamesPayload: Encodable {
     }
 }
 
-public struct FeaturesPerServiceNew: Codable {
-    public let antivirus: Bool
-    public let backups: Bool?
-    public let cleaner: Bool?
-    
-    private struct FeatureDetail: Codable {
-        let enabled: Bool
-    }
-    
-    private enum CodingKeys: String, CodingKey {
-        case antivirus, backups, cleaner
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        let antivirusDetail = try container.decode(FeatureDetail.self, forKey: .antivirus)
-        self.antivirus = antivirusDetail.enabled
-        
-        let backupsDetail = try? container.decodeIfPresent(FeatureDetail.self, forKey: .backups)
-        self.backups = backupsDetail?.enabled
-        
-        let cleanerDetail = try? container.decodeIfPresent(FeatureDetail.self, forKey: .cleaner)
-        self.cleaner = cleanerDetail?.enabled
-    }
-}
+//public struct FeaturesPerServiceNew: Codable {
+//    public let antivirus: Bool
+//    public let backups: Bool?
+//    public let cleaner: Bool?
+//    
+//    private struct FeatureDetail: Codable {
+//        let enabled: Bool
+//    }
+//    
+//    private enum CodingKeys: String, CodingKey {
+//        case antivirus, backups, cleaner
+//    }
+//    
+//    public init(from decoder: Decoder) throws {
+//        let container = try decoder.container(keyedBy: CodingKeys.self)
+//        
+//        let antivirusDetail = try container.decode(FeatureDetail.self, forKey: .antivirus)
+//        self.antivirus = antivirusDetail.enabled
+//        
+//        let backupsDetail = try? container.decodeIfPresent(FeatureDetail.self, forKey: .backups)
+//        self.backups = backupsDetail?.enabled
+//        
+//        let cleanerDetail = try? container.decodeIfPresent(FeatureDetail.self, forKey: .cleaner)
+//        self.cleaner = cleanerDetail?.enabled
+//    }
+//}
