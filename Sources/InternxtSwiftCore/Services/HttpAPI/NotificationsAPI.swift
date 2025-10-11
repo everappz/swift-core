@@ -26,7 +26,7 @@ public struct NotificationsAPI {
     
     public func getNotifications(debug: Bool = false) async throws -> GetNotificationsResponse {
         let endpoint = Endpoint(
-            path: "\(self.baseUrl)/drive/notifications",
+            path: "\(self.baseUrl)/notifications",
             method: .GET
         )
         
