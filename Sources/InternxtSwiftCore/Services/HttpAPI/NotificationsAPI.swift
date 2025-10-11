@@ -7,6 +7,7 @@
 
 import Foundation
 
+@available(macOS 10.15, *)
 public struct NotificationsAPI {
     private let baseUrl: String
     private let apiClient: APIClient
