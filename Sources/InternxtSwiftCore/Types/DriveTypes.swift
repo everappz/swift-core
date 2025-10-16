@@ -732,7 +732,7 @@ public struct GetNotificationsResponse: Codable {
     public let id: String
     public let link: String
     public let message: String
-    public let expiresAt: String
+    public let expiresAt: String?
     public let createdAt: String
     public let deliveredAt: String
     public let readAt: String

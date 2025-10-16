@@ -24,13 +24,13 @@ public struct NotificationsAPI {
     }
     
     
-    public func getNotifications(debug: Bool = false) async throws -> GetNotificationsResponse {
+    public func getNotifications(debug: Bool = false) async throws -> [GetNotificationsResponse] {
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/notifications",
             method: .GET
         )
         
-        return try await apiClient.fetch(type: GetNotificationsResponse.self, endpoint, debugResponse: debug)
+        return try await apiClient.fetch(type: [GetNotificationsResponse].self, endpoint, debugResponse: debug)
     }
     
 }
