@@ -41,6 +41,24 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: GetFolderFoldersResponse.self, endpoint, debugResponse: debug)
     }
     
+    /// Get paginated files inside the given folder using uuid
+    public func getFolderFiles(folderUuid: String, offset: Int = 0, limit: Int = 50, order: String = "ASC", debug: Bool = false) async throws -> GetFolderFilesResponseNew {
+        
+        let query: String = "?limit=\(String(limit))&offset=\(String(offset))&order=\(order)"
+        let endpoint = Endpoint(path: "\(self.baseUrl)/folders/content/\(folderUuid)/files\(query)")
+        
+        return try await apiClient.fetch(type: GetFolderFilesResponseNew.self, endpoint, debugResponse: debug)
+    }
+    
+    /// Get paginated folders inside the given folder using uuid
+    public func getFolderFolders(folderUuid: String, offset: Int = 0, limit: Int = 50, order: String = "ASC", debug: Bool = false) async throws -> GetFolderFoldersResponseNew {
+        
+        let query: String = "?limit=\(String(limit))&offset=\(String(offset))&order=\(order)"
+        let endpoint = Endpoint(path: "\(self.baseUrl)/folders/content/\(folderUuid)/folders\(query)")
+        
+        return try await apiClient.fetch(type: GetFolderFoldersResponseNew.self, endpoint, debugResponse: debug)
+    }
+    
     
     /// Creates a folder inside the given parentFolderId with the given name
     public func createFolder(parentFolderId: Int, folderName: String, debug: Bool = false) async throws -> CreateFolderResponse {

@@ -38,6 +38,10 @@ public struct GetFolderFilesResponse: Decodable {
     public let result: Array<GetFolderFilesResult>
 }
 
+public struct GetFolderFilesResponseNew: Decodable {
+    public let files: Array<GetFolderFilesResult>
+}
+
 public struct GetFolderFoldersResult: Decodable {
     public let type: String?
     public let id: Int
@@ -63,6 +67,11 @@ public struct GetFolderFoldersResult: Decodable {
 public struct GetFolderFoldersResponse: Decodable {
     public let result: Array<GetFolderFoldersResult>
 }
+
+public struct GetFolderFoldersResponseNew: Decodable {
+    public let folders: Array<GetFolderFoldersResult>
+}
+
 
 
 public struct CreateFolderPayload: Encodable {
