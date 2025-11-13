@@ -58,13 +58,14 @@ public struct BackupAPI {
 
         return try await apiClient.fetch(type: DeviceAsFolder.self, endpoint, debugResponse: debug)
     }
-
-    public func getBackupChilds(folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", debug: Bool = false) async throws -> GetFolderFoldersResponse {
-        return try await driveAPI.getFolderFolders(folderId: folderId, offset: offset, limit: limit, sort: sort, debug: debug)
+    
+    public func getBackupChilds(folderUuid: String, offset: Int = 0, limit: Int = 50, order: String = "ASC", debug: Bool = false) async throws -> GetFolderFoldersResponseNew {
+        return try await driveAPI.getFolderFolders(folderUuid: folderUuid, offset: offset, limit: limit, order: order, debug: debug)
     }
 
-    public func getBackupFiles(folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", debug: Bool = false) async throws -> GetFolderFilesResponse {
-        return try await driveAPI.getFolderFiles(folderId: folderId, offset: offset, limit: limit, sort: sort, debug: debug)
+
+    public func getBackupFiles(folderUuid: String, offset: Int = 0, limit: Int = 50, order: String = "ASC", debug: Bool = false) async throws -> GetFolderFilesResponseNew {
+        return try await driveAPI.getFolderFiles(folderUuid: folderUuid, offset: offset, limit: limit, order: order, debug: debug)
     }
 
     public func createBackupFolder(parentFolderUuid: String, folderName: String, debug: Bool = false) async throws -> CreateFolderResponseNew {
@@ -89,5 +90,9 @@ public struct BackupAPI {
     
     public func getExistenceFileInFolderByPlainName(uuid: String, files: Array<ExistenceFile>, debug: Bool = false) async throws  -> ExistenceFilesResponse {
         return try await driveAPI.getExistenceFileInFolderByPlainName(uuid: uuid, files: files)
+    }
+    
+    public func getBackupFolderMeta(folderId: String, debug: Bool = false) async throws -> GetFolderMetaByIdResponse {
+        return try await driveAPI.getFolderMetaById(id: folderId, debug: debug)
     }
 }
