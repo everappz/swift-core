@@ -12,7 +12,7 @@ public struct APIClientError: Error {
     public var statusCode: Int
     public var responseBody: Data
     public var headers: [String: String]
-    private var message: String
+    public var message: String
 
     public var localizedDescription: String {
         return self.message
