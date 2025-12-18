@@ -50,6 +50,15 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: GetFolderFilesResponseNew.self, endpoint, debugResponse: debug)
     }
     
+    
+    public func getFolderFilesV2(folderUuid: String, offset: Int = 0, limit: Int = 50, order: String = "ASC", debug: Bool = false) async throws -> GetFolderFilesResponseV2 {
+        
+        let query: String = "?limit=\(String(limit))&offset=\(String(offset))&order=\(order)"
+        let endpoint = Endpoint(path: "\(self.baseUrl)/folders/content/\(folderUuid)/files\(query)")
+        
+        return try await apiClient.fetch(type: GetFolderFilesResponseV2.self, endpoint, debugResponse: debug)
+    }
+    
     /// Get paginated folders inside the given folder using uuid
     public func getFolderFolders(folderUuid: String, offset: Int = 0, limit: Int = 50, order: String = "ASC", debug: Bool = false) async throws -> GetFolderFoldersResponseNew {
         
@@ -209,6 +218,16 @@ public struct DriveAPI {
         )
         
         return try await apiClient.fetch(type: GetFileMetaByIdResponse.self, endpoint, debugResponse: debug)
+    }
+    
+    /// Get file with fileid optional
+    public func getFileMetaByUuidV2(uuid: String, debug: Bool = false)  async throws -> GetFileMetaByIdResponseV2 {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/files/\(uuid)/meta",
+            method: .GET
+        )
+        
+        return try await apiClient.fetch(type: GetFileMetaByIdResponseV2.self, endpoint, debugResponse: debug)
     }
     
     public func moveFile(fileId: String, bucketId: String, destinationFolder: Int, debug: Bool = false) async throws -> MoveFileResponse {

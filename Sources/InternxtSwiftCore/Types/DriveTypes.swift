@@ -34,12 +34,43 @@ public struct GetFolderFilesResult: Decodable {
     public let uuid: String
 }
 
+public struct GetFolderFilesResultV2: Decodable {
+    public let id: Int
+    public let fileId: String?
+    public let name: String
+    public let type: String?
+    // Size string in bytes
+    public let size: String
+    public let bucket: String
+    public let folderId: Int
+    public let encryptVersion: String?
+    public let deleted: Bool?
+    // ISO string
+    public let deletedAt: String?
+    public let userId: Int
+    public let modificationTime: String
+    // ISO string
+    public let createdAt: String
+    // ISO string
+    public let updatedAt: String
+    public let plainName: String?
+    public let removed: Bool?
+    // ISO string
+    public let removedAt: String?
+    public let status: String
+    public let uuid: String
+}
+
 public struct GetFolderFilesResponse: Decodable {
     public let result: Array<GetFolderFilesResult>
 }
 
 public struct GetFolderFilesResponseNew: Decodable {
     public let files: Array<GetFolderFilesResult>
+}
+
+public struct GetFolderFilesResponseV2: Decodable {
+    public let files: Array<GetFolderFilesResultV2>
 }
 
 public struct GetFolderFoldersResult: Decodable {
@@ -182,6 +213,28 @@ public struct GetFolderMetaByIdResponse: Decodable {
 public struct GetFileMetaByIdResponse: Decodable {
     public let id: Int
     public let fileId: String
+    public let folderId: Int
+    public let name: String
+    public let type: String?
+    public let size: String
+    public let bucket: String
+    public let deleted: Bool?
+    public let deletedAt: String?
+    public let userId: Int
+    public let modificationTime: String
+    public let createdAt: String
+    public let updatedAt: String
+    public let uuid: String
+    public let plainName: String?
+    public let removed: Bool?
+    public let removedAt: String?
+    public let status: String
+    public let folderUuid: String?
+}
+
+public struct GetFileMetaByIdResponseV2: Decodable {
+    public let id: Int
+    public let fileId: String?
     public let folderId: Int
     public let name: String
     public let type: String?
@@ -363,7 +416,7 @@ public struct CreateFileResponseNew: Decodable {
     public let type: String?
     public let size: String?
     public let folderId: Int
-    public let fileId: String
+    public let fileId: String?
     public let bucket: String
     public let encrypt_version: String
     public let userId: Int
