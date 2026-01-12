@@ -158,7 +158,7 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: UpdateFolderResponse.self, endpoint, debugResponse: debug)
     }
     
-    public func replaceFileId(fileUuid: String, newFileId: String, newSize: Int, debug: Bool = false) async throws -> ReplaceFileResponse {
+    public func replaceFileId(fileUuid: String, newFileId: String?, newSize: Int, debug: Bool = false) async throws -> ReplaceFileResponse {
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/files/\(fileUuid)",
             method: .PUT,
