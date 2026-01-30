@@ -38,7 +38,7 @@ public struct DriveUtils {
         return GetDriveItemMetaByIdResponse(
             id: folderMeta.id,
             parentId: folderMeta.parentId,
-            name: folderMeta.name,
+            name: (folderMeta.name ?? folderMeta.plainName) ?? "",
             bucket: folderMeta.bucket,
             userId: folderMeta.userId,
             encryptVersion: folderMeta.encryptVersion,

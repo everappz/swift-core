@@ -194,7 +194,7 @@ public struct UpdateFileResponseNew: Decodable {
 public struct GetFolderMetaByIdResponse: Decodable {
     public let id: Int
     public let parentId: Int?
-    public let name: String
+    public let name: String?
     public let bucket: String?
     public let userId: Int
     public let encryptVersion: String?
@@ -205,7 +205,7 @@ public struct GetFolderMetaByIdResponse: Decodable {
     public let deletedAt: String?
     public let removedAt: String?
     public let uuid: String?
-    public let plainName: String?
+    public let plainName: String
     public let removed: Bool?
     public let parentUuid: String?
 }
