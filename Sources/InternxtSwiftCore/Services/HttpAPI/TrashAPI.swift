@@ -15,7 +15,7 @@ public struct TrashAPI {
     public init(baseUrl: String, authToken: String, clientName: String, clientVersion: String,workspaceHeader: String? = nil
     ,gatewayHeader: String? = nil) {
         self.baseUrl = baseUrl
-        self.apiClient = APIClient(urlSession: URLSession.shared, authorizationHeaderValue: "Bearer \(authToken)",clientName: clientName, clientVersion: clientVersion,workspaceHeader: workspaceHeader,
+        self.apiClient = APIClient(urlSession: APIClient.ephemeralSession, authorizationHeaderValue: "Bearer \(authToken)",clientName: clientName, clientVersion: clientVersion,workspaceHeader: workspaceHeader,
             authorizationHeaderGatewayValue: gatewayHeader)
     }
     

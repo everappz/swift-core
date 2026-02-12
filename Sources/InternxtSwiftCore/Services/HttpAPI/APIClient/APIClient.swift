@@ -231,6 +231,15 @@ private class DateFormatterCache {
 
 @available(macOS 10.15, *)
 struct APIClient {
+    /// Shared ephemeral URLSession that avoids DNS and HTTP caching.
+    public static let ephemeralSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        config.httpCookieStorage = nil
+        return URLSession(configuration: config)
+    }()
+    
     var urlSession: URLSession
     var authorizationHeaderValue: String? = nil
     var clientName: String? = nil
@@ -245,7 +254,7 @@ struct APIClient {
     private let semaphore: BoundedAsyncSemaphore
     
     init(
-        urlSession: URLSession = .shared,
+        urlSession: URLSession = APIClient.ephemeralSession,
         authorizationHeaderValue: String? = nil,
         clientName: String? = nil,
         clientVersion: String? = nil,

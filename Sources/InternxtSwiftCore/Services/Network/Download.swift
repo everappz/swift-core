@@ -45,7 +45,7 @@ public class Download: NSObject {
         if let urlSession = urlSession {
             self.urlSession = urlSession
         } else {
-            self.urlSession = URLSession.shared
+            self.urlSession = APIClient.ephemeralSession
         }
         
         super.init()

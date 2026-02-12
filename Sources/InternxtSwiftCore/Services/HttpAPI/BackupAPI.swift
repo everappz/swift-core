@@ -15,7 +15,7 @@ public struct BackupAPI {
 
     public init(baseUrl: String, authToken: String, clientName: String, clientVersion: String, gatewayHeader: String? = nil) {
         self.baseUrl = baseUrl
-        self.apiClient = APIClient(urlSession: URLSession.shared, authorizationHeaderValue: "Bearer \(authToken)", clientName: clientName, clientVersion: clientVersion
+        self.apiClient = APIClient(urlSession: APIClient.ephemeralSession, authorizationHeaderValue: "Bearer \(authToken)", clientName: clientName, clientVersion: clientVersion
             ,authorizationHeaderGatewayValue: gatewayHeader)
         self.driveAPI = DriveAPI(baseUrl: baseUrl, authToken: authToken, clientName: clientName, clientVersion: clientVersion)
     }
