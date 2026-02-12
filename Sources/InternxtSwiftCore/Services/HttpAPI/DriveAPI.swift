@@ -15,7 +15,7 @@ public struct DriveAPI {
     private let clientVersion: String
     public init(baseUrl: String, authToken: String, clientName: String, clientVersion: String, workspaceHeader: String? = nil, gatewayHeader: String? = nil) {
         self.baseUrl = baseUrl
-        self.apiClient = APIClient(urlSession: URLSession.shared, authorizationHeaderValue: "Bearer \(authToken)", clientName: clientName, 
+        self.apiClient = APIClient(urlSession: APIClient.ephemeralSession, authorizationHeaderValue: "Bearer \(authToken)", clientName: clientName, 
             clientVersion: clientVersion,
             workspaceHeader: workspaceHeader,
             authorizationHeaderGatewayValue: gatewayHeader
@@ -325,7 +325,7 @@ public struct DriveAPI {
 
     public func refreshUser(currentAuthToken: String, debug: Bool = false) async throws -> RefreshUserResponse  {
         
-        let apiClient = APIClient(urlSession: URLSession.shared, authorizationHeaderValue: "Bearer \(currentAuthToken)", clientName: clientName, clientVersion: clientVersion)
+        let apiClient = APIClient(urlSession: APIClient.ephemeralSession, authorizationHeaderValue: "Bearer \(currentAuthToken)", clientName: clientName, clientVersion: clientVersion)
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/users/refresh",
             method: .GET
@@ -336,7 +336,7 @@ public struct DriveAPI {
     
     public func refreshTokens(currentAuthToken: String, debug: Bool = false) async throws -> RefreshTokensResponse  {
         
-        let apiClient = APIClient(urlSession: URLSession.shared, authorizationHeaderValue: "Bearer \(currentAuthToken)", clientName: clientName, clientVersion: clientVersion)
+        let apiClient = APIClient(urlSession: APIClient.ephemeralSession, authorizationHeaderValue: "Bearer \(currentAuthToken)", clientName: clientName, clientVersion: clientVersion)
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/users/refresh",
             method: .GET
@@ -448,7 +448,7 @@ public struct DriveAPI {
     
     public func registerPushDeviceToken(currentAuthToken: String, deviceToken: String, type: String, debug: Bool = false) async throws -> PushDeviceTokenResponse  {
         
-        let apiClient = APIClient(urlSession: URLSession.shared, authorizationHeaderValue: "Bearer \(currentAuthToken)", clientName: clientName, clientVersion: clientVersion)
+        let apiClient = APIClient(urlSession: APIClient.ephemeralSession, authorizationHeaderValue: "Bearer \(currentAuthToken)", clientName: clientName, clientVersion: clientVersion)
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/users/notification-token",
             method: .POST,

@@ -13,10 +13,10 @@ public struct NetworkAPI {
     private let baseUrl: String
     private let apiClient: APIClient
 
-    public init(baseUrl: String, basicAuthToken: String, urlSession: URLSession = URLSession.shared, clientName: String, clientVersion: String, gatewayHeader: String? = nil) {
+    public init(baseUrl: String, basicAuthToken: String, urlSession: URLSession? = nil, clientName: String, clientVersion: String, gatewayHeader: String? = nil) {
         self.baseUrl = baseUrl
-        
-        self.apiClient = APIClient(urlSession: urlSession, authorizationHeaderValue: "Basic \(basicAuthToken)", clientName: clientName, clientVersion: clientVersion,
+        let session = urlSession ?? APIClient.ephemeralSession
+        self.apiClient = APIClient(urlSession: session, authorizationHeaderValue: "Basic \(basicAuthToken)", clientName: clientName, clientVersion: clientVersion,
                                    authorizationHeaderGatewayValue: gatewayHeader)
     }
     
