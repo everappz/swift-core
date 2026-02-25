@@ -611,7 +611,7 @@ public struct GetDriveItemMetaByIdResponse: Decodable {
     public let status: String?
     
     public var isFolder: Bool {
-        return fileId == nil
+        return type == "folder"
     }
     
 }

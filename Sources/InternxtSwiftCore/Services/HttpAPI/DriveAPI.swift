@@ -438,7 +438,7 @@ public struct DriveAPI {
     public func getFolderOrFileMetaById(id: String, debug: Bool = false) async throws -> GetDriveItemMetaByIdResponse {
         
         if UUID(uuidString: id) != nil{
-            let fileMeta = try await getFileMetaByUuid(uuid: id)
+            let fileMeta = try await getFileMetaByUuidV2(uuid: id)
             return DriveUtils.convertFileMetaToUnified(fileMeta: fileMeta)
         }
         let folderMeta = try await getFolderMetaById(id: id)
