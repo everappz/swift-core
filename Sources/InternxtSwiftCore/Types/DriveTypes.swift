@@ -37,7 +37,7 @@ public struct GetFolderFilesResult: Decodable {
 public struct GetFolderFilesResultV2: Decodable {
     public let id: Int
     public let fileId: String?
-    public let name: String
+    public let name: String?
     public let type: String?
     // Size string in bytes
     public let size: String
