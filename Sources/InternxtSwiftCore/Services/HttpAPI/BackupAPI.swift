@@ -64,8 +64,8 @@ public struct BackupAPI {
     }
 
 
-    public func getBackupFiles(folderUuid: String, offset: Int = 0, limit: Int = 50, order: String = "ASC", debug: Bool = false) async throws -> GetFolderFilesResponseNew {
-        return try await driveAPI.getFolderFiles(folderUuid: folderUuid, offset: offset, limit: limit, order: order, debug: debug)
+    public func getBackupFiles(folderUuid: String, offset: Int = 0, limit: Int = 50, order: String = "ASC", debug: Bool = false) async throws -> GetFolderFilesResponseV2 {
+        return try await driveAPI.getFolderFilesV2(folderUuid: folderUuid, offset: offset, limit: limit, order: order, debug: debug)
     }
 
     public func createBackupFolder(parentFolderUuid: String, folderName: String, debug: Bool = false) async throws -> CreateFolderResponseNew {
