@@ -1,0 +1,23 @@
+PODS:
+  - IDZSwiftCommonCrypto (0.16.1)
+  - InternxtSwiftCore (0.1.0):
+    - IDZSwiftCommonCrypto (~> 0.13)
+
+DEPENDENCIES:
+  - InternxtSwiftCore (from `../`)
+
+SPEC REPOS:
+  trunk:
+    - IDZSwiftCommonCrypto
+
+EXTERNAL SOURCES:
+  InternxtSwiftCore:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  IDZSwiftCommonCrypto: aefd3487b88dc3d7a1de2553188c720ac3194940
+  InternxtSwiftCore: 02a7e159b9352b368f61777b137e60f14d7bf344
+
+PODFILE CHECKSUM: 6cb43269624212f570dd3635e33648a00908a0c9
+
+COCOAPODS: 1.16.2
