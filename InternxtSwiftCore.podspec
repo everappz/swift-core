@@ -8,10 +8,11 @@ Pod::Spec.new do |s|
   s.author           = { 'Internxt' => 'hello@internxt.com' }
   s.source           = { :git => 'https://github.com/everappz/swift-core.git', :tag => s.version.to_s }
 
+  s.ios.deployment_target  = '15.0'
   s.macos.deployment_target = '10.15'
   s.swift_version    = '5.7'
 
   s.source_files     = 'Sources/InternxtSwiftCore/**/*.swift'
 
-  s.dependency 'IDZSwiftCommonCrypto', '0.13.0'
+  s.dependency 'IDZSwiftCommonCrypto', '~> 0.13.0'
 end
