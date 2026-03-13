@@ -230,6 +230,7 @@ public struct CreateFileResponseV2: Decodable {
     public let folderUuid: String?
     public let encryptVersion: String?
     public let userId: Int
+    public let modificationTime: String?
     public let createdAt: String
     public let updatedAt: String
     public let plainName: String?
