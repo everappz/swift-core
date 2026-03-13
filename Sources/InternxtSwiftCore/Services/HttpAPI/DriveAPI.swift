@@ -23,19 +23,25 @@ public struct DriveAPI {
     }
     
     /// Get paginated files inside the given folder
-    public func getFolderFiles(folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", debug: Bool = false) async throws -> GetFolderFilesResponse {
-        
-        let query: String = "?offset=\(String(offset))&limit=\(String(limit))&sort=\(sort)"
+    public func getFolderFiles(folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", status: String? = nil, debug: Bool = false) async throws -> GetFolderFilesResponse {
+
+        var query: String = "?offset=\(String(offset))&limit=\(String(limit))&sort=\(sort)"
+        if let status = status {
+            query += "&status=\(status)"
+        }
         let endpoint = Endpoint(path: "\(self.baseUrl)/folders/\(folderId)/files\(query)")
-        
+
         return try await apiClient.fetch(type: GetFolderFilesResponse.self, endpoint, debugResponse: debug)
     }
     
     /// Get paginated folders inside the given folder
-    public func getFolderFolders(folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", debug: Bool = false) async throws -> GetFolderFoldersResponse {
-        let query: String = "?offset=\(String(offset))&limit=\(String(limit))&sort=\(sort)"
+    public func getFolderFolders(folderId: String, offset: Int = 0, limit: Int = 50, sort: String = "ASC", status: String? = nil, debug: Bool = false) async throws -> GetFolderFoldersResponse {
+        var query: String = "?offset=\(String(offset))&limit=\(String(limit))&sort=\(sort)"
+        if let status = status {
+            query += "&status=\(status)"
+        }
         let endpoint = Endpoint(path: "\(self.baseUrl)/folders/\(folderId)/folders\(query)")
-        
+
         return try await apiClient.fetch(type: GetFolderFoldersResponse.self, endpoint, debugResponse: debug)
     }
     
@@ -51,15 +57,26 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: CreateFolderResponse.self, endpoint, debugResponse: debug)
     }
     
-    /// Creates a file inside the given parentFolderId with the given name
+    /// Creates a file inside the given parentFolderId with the given name (legacy endpoint)
     public func createFile(createFile: CreateFileData, debug: Bool = false) async throws -> CreateFileResponse {
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/storage/file",
             method: .POST,
             body: CreateFilePayload(file: createFile).toJson()
         )
-        
+
         return try await apiClient.fetch(type: CreateFileResponse.self, endpoint, debugResponse: debug)
+    }
+
+    /// Creates a file using the new API endpoint POST /files
+    public func createFileV2(createFile: CreateFileDataV2, debug: Bool = false) async throws -> CreateFileResponseV2 {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/files",
+            method: .POST,
+            body: createFile.toJson()
+        )
+
+        return try await apiClient.fetch(type: CreateFileResponseV2.self, endpoint, debugResponse: debug)
     }
     
     public func createThumbnail(createThumbnail: CreateThumbnailData, debug: Bool = false) async throws -> CreateThumbnailResponse {
@@ -97,7 +114,7 @@ public struct DriveAPI {
         return try await apiClient.fetch(type: ReplaceFileResponse.self, endpoint, debugResponse: debug)
     }
     
-    /// Given a fileId, updates the file name
+    /// Given a fileId, updates the file name (legacy endpoint)
     public func updateFile(fileId: String, bucketId: String, newFilename: String, debug: Bool = false) async throws -> UpdateFileResponse {
         let endpoint = Endpoint(
             path: "\(self.baseUrl)/storage/file/\(fileId)/meta",
@@ -107,8 +124,30 @@ public struct DriveAPI {
                 metadata: FileMetadataUpdatePayload(itemName: newFilename)
             ).toJson()
         )
-        
+
         return try await apiClient.fetch(type: UpdateFileResponse.self, endpoint, debugResponse: debug)
+    }
+
+    /// Rename a file using new API: PUT /files/{uuid}/meta
+    public func updateFileV2(fileUuid: String, plainName: String, type: String?, debug: Bool = false) async throws -> CreateFileResponseV2 {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/files/\(fileUuid)/meta",
+            method: .PUT,
+            body: UpdateFileMetaPayload(plainName: plainName, type: type).toJson()
+        )
+
+        return try await apiClient.fetch(type: CreateFileResponseV2.self, endpoint, debugResponse: debug)
+    }
+
+    /// Move a file using new API: PATCH /files/{uuid}
+    public func moveFileV2(fileUuid: String, destinationFolderUuid: String, debug: Bool = false) async throws -> CreateFileResponseV2 {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/files/\(fileUuid)",
+            method: .PATCH,
+            body: MoveFilePayloadV2(destinationFolder: destinationFolderUuid, name: nil, type: nil).toJson()
+        )
+
+        return try await apiClient.fetch(type: CreateFileResponseV2.self, endpoint, debugResponse: debug)
     }
     
     public func getFolderMetaById(id: String, debug: Bool = false) async throws -> GetFolderMetaByIdResponse {
@@ -152,8 +191,30 @@ public struct DriveAPI {
                 destination: destinationFolder
             ).toJson()
         )
-    
+
         return try await apiClient.fetch(type: MoveFolderResponse.self, endpoint, debugResponse: debug)
+    }
+
+    /// Rename a folder using new API: PUT /folders/{uuid}/meta
+    public func updateFolderV2(folderUuid: String, plainName: String, debug: Bool = false) async throws -> UpdateFolderResponse {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/folders/\(folderUuid)/meta",
+            method: .PUT,
+            body: UpdateFolderMetaPayload(plainName: plainName).toJson()
+        )
+
+        return try await apiClient.fetch(type: UpdateFolderResponse.self, endpoint, debugResponse: debug)
+    }
+
+    /// Move a folder using new API: PATCH /folders/{uuid}
+    public func moveFolderV2(folderUuid: String, destinationFolderUuid: String, debug: Bool = false) async throws -> UpdateFolderResponse {
+        let endpoint = Endpoint(
+            path: "\(self.baseUrl)/folders/\(folderUuid)",
+            method: .PATCH,
+            body: MoveFolderPayloadV2(destinationFolder: destinationFolderUuid, name: nil).toJson()
+        )
+
+        return try await apiClient.fetch(type: UpdateFolderResponse.self, endpoint, debugResponse: debug)
     }
 
     public func deleteFolder(folderId: Int, debug: Bool = false) async throws -> Bool {

@@ -42,6 +42,8 @@ public struct GetFolderFoldersResult: Decodable {
     public let type: String?
     public let id: Int
     public let parentId: Int?
+    public let parentUuid: String?
+    public let uuid: String?
     public let name: String
     public let userId: Int
     public let encryptVersion: String?
@@ -88,6 +90,8 @@ public struct CreateFolderResponse: Decodable {
 public struct UpdateFolderResponse: Decodable {
     public let id: Int
     public let name: String
+    public let uuid: String?
+    public let plainName: String?
 }
 
 public struct FolderMetadataUpdatePayload: Encodable {
@@ -97,6 +101,11 @@ public struct FolderMetadataUpdatePayload: Encodable {
 
 public struct UpdateFolderPayload: Encodable {
     public let metadata: FolderMetadataUpdatePayload
+}
+
+// New API: PUT /folders/{uuid}/meta
+public struct UpdateFolderMetaPayload: Encodable {
+    public let plainName: String
 }
 
 public struct FileMetadataUpdatePayload: Encodable {
@@ -110,8 +119,15 @@ public struct UpdateFilePayload: Encodable {
     public let relativePath: String = NSUUID().uuidString
 }
 
+// New API: PUT /files/{uuid}/meta
+public struct UpdateFileMetaPayload: Encodable {
+    public let plainName: String
+    public let type: String?
+}
+
 public struct UpdateFileResponse: Decodable {
-    public let plain_name: String
+    public let plain_name: String?
+    public let plainName: String?
 }
 
 
@@ -164,7 +180,7 @@ public struct CreateFileData: Encodable {
     public let name: String?
     public let plain_name: String
     public let encrypt_version: String
-    
+
     public init(fileId: String, type: String?, bucket: String, size: Int, folderId: Int, name: String?, plainName: String, encryptVersion: String = "03-aes") {
         self.fileId = fileId
         self.type = type
@@ -179,6 +195,45 @@ public struct CreateFileData: Encodable {
 
 public struct CreateFilePayload: Encodable {
     public let file: CreateFileData
+}
+
+// New API: POST /files (flat body, camelCase, folderUuid instead of folder_id)
+public struct CreateFileDataV2: Encodable {
+    public let fileId: String?
+    public let type: String?
+    public let bucket: String
+    public let size: Int
+    public let folderUuid: String
+    public let plainName: String
+    public let encryptVersion: String
+
+    public init(fileId: String?, type: String?, bucket: String, size: Int, folderUuid: String, plainName: String, encryptVersion: String = "03-aes") {
+        self.fileId = fileId
+        self.type = type
+        self.bucket = bucket
+        self.size = size
+        self.folderUuid = folderUuid
+        self.plainName = plainName
+        self.encryptVersion = encryptVersion
+    }
+}
+
+public struct CreateFileResponseV2: Decodable {
+    public let id: Int
+    public let uuid: String
+    public let fileId: String?
+    public let name: String?
+    public let type: String?
+    public let size: String?
+    public let bucket: String
+    public let folderId: Int
+    public let folderUuid: String?
+    public let encryptVersion: String?
+    public let userId: Int
+    public let createdAt: String
+    public let updatedAt: String
+    public let plainName: String?
+    public let status: String?
 }
 
 public struct CreateThumbnailData: Encodable {
@@ -275,6 +330,19 @@ public struct MoveFilePayload: Encodable {
 
 public struct MoveFileResponse: Decodable {
     public let moved: Bool
+}
+
+// New API: PATCH /files/{uuid}
+public struct MoveFilePayloadV2: Encodable {
+    public let destinationFolder: String
+    public let name: String?
+    public let type: String?
+}
+
+// New API: PATCH /folders/{uuid}
+public struct MoveFolderPayloadV2: Encodable {
+    public let destinationFolder: String
+    public let name: String?
 }
 
 public struct DeleteFolderResponse: Decodable {}
